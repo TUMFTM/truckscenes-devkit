@@ -55,9 +55,9 @@ deactivate
 ```
 
 ## Setup PYTHONPATH
-Add the `python-sdk` directory to your `PYTHONPATH` environmental variable:
+Add the `src` directory to your `PYTHONPATH` environmental variable:
 ```
-export PYTHONPATH="${PYTHONPATH}:$HOME/man-devkit/python-sdk"
+export PYTHONPATH="${PYTHONPATH}:$HOME/truckscenes-devkit/src"
 ```
 
 ## Install required packages
@@ -66,7 +66,7 @@ To install the required packages, run the following command in your favorite vir
 ```
 pip install -r requirements.txt
 ```
-**Note:** The requirements file is internally divided into base requirements (`base`) and requirements additional requirements.
+**Note:** The requirements file is internally divided into base requirements (`base`) and additional requirements (`tutorial`, `visu`).
 
 If you want to install these additional requirements, please run:
 ```
@@ -93,7 +93,7 @@ backend: TKAgg
 ```
 
 ## Verify install
-To verify your environment run `python -m unittest` in the `python-sdk` folder.
+To verify your environment run `python -m unittest` in the `test` folder.
 
 That's it you should be good to go!
 

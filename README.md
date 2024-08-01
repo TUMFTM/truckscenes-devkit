@@ -19,13 +19,18 @@ The first multimodal dataset for autonomous trucking
 ## Installation
 Our devkit is available and can be installed via pip:
 ```
-pip install -e <path to devkit>
+pip install truckscenes-devkit
+```
+
+If you also want to install all the (optional) dependencies for running the visualizations:
+```
+pip install "truckscenes-devkit[all]"
 ```
 
 The usage requires Python (install [here](https://www.python.org/downloads/), tested for 3.6 and 3.8) and pip (install [here](https://pip.pypa.io/en/stable/installation/)) for the installation.
 
 ## TruckScenes Setup
-MAN TruckScenes can be downloaded on our [Download page](https://www.man.eu/truckscenes/) or search for TruckScenes in the [AWS Open Data Registry](https://registry.opendata.aws/).  
+The MAN TruckScenes dataset can be downloaded on our [Download page](https://www.man.eu/truckscenes/) or search for TruckScenes in the [AWS Open Data Registry](https://registry.opendata.aws/).  
 
 For the devkit to work you will need to download **all** archives.  
 Please unpack the archives to the `/data/truckscenes` folder **without** overwriting folders that occur in multiple archives.  
@@ -44,7 +49,7 @@ Please follow these steps to make yourself familiar with the MAN TruckScenes dat
 - Make yourself familiar with the [dataset schema](./docs/schema_truckscenes.md)
 - Run the [tutorial](./python-sdk/tutorials/truckscenes_tutorial.ipynb) to get started:
   ```
-  jupyter notebook $HOME/man-devkit/python-sdk/tutorials/truckscenes_tutorial.ipynb
+  jupyter notebook $HOME/truckscenes-devkit/tutorials/truckscenes_tutorial.ipynb
   ```
 - Read the [MAN TruckScenes Paper](https://arxiv.org/abs/2407.07462) for a detailed analysis of the dataset.
 
