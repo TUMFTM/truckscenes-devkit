@@ -1,1 +1,3 @@
 -r setup/requirements/requirements_base.txt
+-r setup/requirements/requirements_tutorial.txt
+-r setup/requirements/requirements_visu.txt

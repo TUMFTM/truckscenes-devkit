@@ -23,7 +23,7 @@ def config_factory(configuration_name: str) -> DetectionConfig:
 
     # Check if config exists.
     this_dir = os.path.dirname(os.path.abspath(__file__))
-    cfg_path = os.path.join(this_dir, 'configs', '%s.json' % configuration_name)
+    cfg_path = os.path.join(this_dir, 'configs', f'{configuration_name}.json')
     assert os.path.exists(cfg_path), \
         'Requested unknown configuration {}'.format(configuration_name)
 

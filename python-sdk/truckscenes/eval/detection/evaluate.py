@@ -6,22 +6,23 @@ import json
 import os
 import random
 import time
+import warnings
+
+from importlib import import_module
 from typing import Tuple, Dict, Any
 
 import numpy as np
 
 from truckscenes import TruckScenes
-from truckscenes.eval.common.config import config_factory
 from truckscenes.eval.common.constants import TAG_NAMES
 from truckscenes.eval.common.data_classes import EvalBoxes
 from truckscenes.eval.common.loaders import load_prediction, load_gt, add_center_dist, \
     get_scene_tag_masks, filter_eval_boxes
 from truckscenes.eval.detection.algo import accumulate, calc_ap, calc_tp
+from truckscenes.eval.detection.config import config_factory
 from truckscenes.eval.detection.constants import TP_METRICS
 from truckscenes.eval.detection.data_classes import DetectionConfig, DetectionMetrics, \
     DetectionMetricsList, DetectionBox, DetectionMetricDataList
-from truckscenes.eval.detection.render import summary_plot, class_pr_curve, class_tp_curve, \
-    dist_pr_curve, visualize_sample
 
 
 class DetectionEval:
@@ -195,40 +196,55 @@ class DetectionEval:
         :param metrics: DetectionMetrics instance.
         :param md_list: DetectionMetricDataList instance.
         """
-        if self.verbose:
-            print('Rendering PR and TP curves')
+        # Initialize render module
+        try:
+            summary_plot = getattr(import_module("truckscenes.eval.detection.render"),
+                                   "summary_plot")
+            class_pr_curve = getattr(import_module("truckscenes.eval.detection.render"),
+                                     "class_pr_curve")
+            class_tp_curve = getattr(import_module("truckscenes.eval.detection.render"),
+                                     "class_tp_curve")
+            dist_pr_curve = getattr(import_module("truckscenes.eval.detection.render"),
+                                    "dist_pr_curve")
+        except ModuleNotFoundError:
+            warnings.warn('''The visualization dependencies are not installed on your system! '''
+                          '''Run 'pip install "truckscenes-devkit[all]"'.''')
+        else:
+            # Render curves
+            if self.verbose:
+                print('Rendering PR and TP curves')
 
-        def savepath(name):
-            return os.path.join(self.plot_dir, name + '.pdf')
+            def savepath(name):
+                return os.path.join(self.plot_dir, name + '.pdf')
 
-        summary_plot(md_list, metrics, min_precision=self.cfg.min_precision,
-                     min_recall=self.cfg.min_recall, dist_th_tp=self.cfg.dist_th_tp,
-                     savepath=savepath('summary'))
+            summary_plot(md_list, metrics, min_precision=self.cfg.min_precision,
+                        min_recall=self.cfg.min_recall, dist_th_tp=self.cfg.dist_th_tp,
+                        savepath=savepath('summary'))
 
-        for detection_name in self.cfg.class_names:
-            class_pr_curve(md_list, metrics, detection_name, self.cfg.min_precision,
-                           self.cfg.min_recall, savepath=savepath(detection_name + '_pr'))
+            for detection_name in self.cfg.class_names:
+                class_pr_curve(md_list, metrics, detection_name, self.cfg.min_precision,
+                            self.cfg.min_recall, savepath=savepath(detection_name + '_pr'))
 
-            class_tp_curve(md_list, metrics, detection_name, self.cfg.min_recall,
-                           self.cfg.dist_th_tp, savepath=savepath(detection_name + '_tp'))
+                class_tp_curve(md_list, metrics, detection_name, self.cfg.min_recall,
+                            self.cfg.dist_th_tp, savepath=savepath(detection_name + '_tp'))
 
-        for dist_th in self.cfg.dist_ths:
-            dist_pr_curve(md_list, metrics, dist_th, self.cfg.min_precision, self.cfg.min_recall,
-                          savepath=savepath('dist_pr_' + str(dist_th)))
-
-    def main(self,
-             plot_examples: int = 0,
-             render_curves: bool = True,
-             evaluate_tags: bool = False) -> Dict[str, Any]:
+            for dist_th in self.cfg.dist_ths:
+                dist_pr_curve(md_list, metrics, dist_th, self.cfg.min_precision, self.cfg.min_recall,
+                            savepath=savepath('dist_pr_' + str(dist_th)))
+            
+    def _plot_examples(self, plot_examples: int) -> None:
         """
-        Main function that loads the evaluation code, visualizes samples,
-        runs the evaluation and renders stat plots.
-
-        :param plot_examples: How many example visualizations to write to disk.
-        :param render_curves: Whether to render PR and TP curves to disk.
-        :return: A dict that stores the high-level metrics and meta data.
+        Plot randomly selected examples.
+        :param plot_examples: Number of examples to plot.
         """
-        if plot_examples > 0:
+        # Initialize render module
+        try:
+            visualize_sample = getattr(import_module("truckscenes.eval.detection.render"),
+                                       "visualize_sample")
+        except ModuleNotFoundError:
+            warnings.warn('''The visualization dependencies are not installed on your system! '''
+                          '''Run 'pip install "truckscenes-devkit[all]"'.''')
+        else:
             # Select a random but fixed subset to plot.
             random.seed(42)
             sample_tokens = list(self.sample_tokens)
@@ -247,6 +263,21 @@ class DetectionEval:
                                  self.pred_boxes,
                                  eval_range=max(self.cfg.class_range.values()),
                                  savepath=os.path.join(example_dir, '{}.png'.format(sample_token)))
+
+    def main(self,
+             plot_examples: int = 0,
+             render_curves: bool = True,
+             evaluate_tags: bool = False) -> Dict[str, Any]:
+        """
+        Main function that loads the evaluation code, visualizes samples,
+        runs the evaluation and renders stat plots.
+
+        :param plot_examples: How many example visualizations to write to disk.
+        :param render_curves: Whether to render PR and TP curves to disk.
+        :return: A dict that stores the high-level metrics and meta data.
+        """
+        if plot_examples > 0:
+            self._plot_examples(plot_examples)
 
         # Run evaluation.
         metrics_list, metric_data_list = self.evaluate(evaluate_tags)

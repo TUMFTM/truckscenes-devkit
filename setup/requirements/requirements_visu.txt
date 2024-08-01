@@ -1,0 +1,4 @@
+matplotlib
+open3d
+opencv-python
+Pillow>6.2.1

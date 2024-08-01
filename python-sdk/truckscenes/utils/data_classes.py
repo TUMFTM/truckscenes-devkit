@@ -6,17 +6,19 @@ from __future__ import annotations
 
 import copy
 import os.path as osp
+import warnings
+
 from abc import ABC, abstractmethod
 from functools import reduce
+from importlib import import_module
 from typing import Tuple, List, Dict
 
-import cv2
 import numpy as np
-from matplotlib.axes import Axes
-from pyquaternion import Quaternion
-from pypcd import pypcd
+import pypcd4
 
-from truckscenes.utils.geometry_utils import view_points, transform_matrix
+from pyquaternion import Quaternion
+
+from truckscenes.utils.geometry_utils import transform_matrix
 
 
 class PointCloud(ABC):
@@ -215,7 +217,7 @@ class PointCloud(ABC):
         )[:3, :]
 
     def render_height(self,
-                      ax: Axes,
+                      ax,
                       view: np.ndarray = np.eye(4),
                       x_lim: Tuple[float, float] = (-20, 20),
                       y_lim: Tuple[float, float] = (-20, 20),
@@ -230,10 +232,19 @@ class PointCloud(ABC):
         :param y_lim: (min, max). y range for plotting.
         :param marker_size: Marker size.
         """
-        self._render_helper(2, ax, view, x_lim, y_lim, marker_size)
+        # Initialize visualization methods
+        try:
+            _render_helper = getattr(import_module("truckscenes.utils.visualization_utils"),
+                                     "_render_pc_helper")
+        except ModuleNotFoundError:
+            print('''The visualization dependencies are not installed on your system! '''
+                  '''Run 'pip install "truckscenes-devkit[all]"'.''')
+
+        # Render point cloud
+        _render_helper(2, ax, view, x_lim, y_lim, marker_size)
 
     def render_intensity(self,
-                         ax: Axes,
+                         ax,
                          view: np.ndarray = np.eye(4),
                          x_lim: Tuple[float, float] = (-20, 20),
                          y_lim: Tuple[float, float] = (-20, 20),
@@ -248,28 +259,16 @@ class PointCloud(ABC):
         :param y_lim: (min, max).
         :param marker_size: Marker size.
         """
-        self._render_helper(3, ax, view, x_lim, y_lim, marker_size)
+        # Initialize visualization methods
+        try:
+            _render_helper = getattr(import_module("truckscenes.utils.visualization_utils"),
+                                     "_render_pc_helper")
+        except ModuleNotFoundError:
+            warnings.warn('''The visualization dependencies are not installed on your system! '''
+                          '''Run 'pip install "truckscenes-devkit[all]"'.''')
 
-    def _render_helper(self,
-                       color_channel: int,
-                       ax: Axes,
-                       view: np.ndarray,
-                       x_lim: Tuple[float, float],
-                       y_lim: Tuple[float, float],
-                       marker_size: float) -> None:
-        """
-        Helper function for rendering.
-        :param color_channel: Point channel to use as color.
-        :param ax: Axes on which to render the points.
-        :param view: <np.float: n, n>. Defines an arbitrary projection (n <= 4).
-        :param x_lim: (min, max).
-        :param y_lim: (min, max).
-        :param marker_size: Marker size.
-        """
-        points = view_points(self.points[:3, :], view, normalize=False)
-        ax.scatter(points[0, :], points[1, :], c=self.points[color_channel, :], s=marker_size)
-        ax.set_xlim(x_lim[0], x_lim[1])
-        ax.set_ylim(y_lim[0], y_lim[1])
+        # Render point cloud
+        _render_helper(3, ax, view, x_lim, y_lim, marker_size)
 
 
 class LidarPointCloud(PointCloud):
@@ -294,7 +293,7 @@ class LidarPointCloud(PointCloud):
 
         assert file_name.endswith('.pcd'), 'Unsupported filetype {}'.format(file_name)
 
-        lidar = pypcd.PointCloud.from_path(file_name)
+        lidar = pypcd4.PointCloud.from_path(file_name)
 
         lidar_data = lidar.pc_data
         points = np.array([lidar_data["x"], lidar_data["y"], lidar_data["z"],
@@ -319,7 +318,7 @@ class RadarPointCloud(PointCloud):
 
         assert file_name.endswith('.pcd'), 'Unsupported filetype {}'.format(file_name)
 
-        radar = pypcd.PointCloud.from_path(file_name)
+        radar = pypcd4.PointCloud.from_path(file_name)
 
         radar_data = radar.pc_data
         points = np.array([radar_data["x"], radar_data["y"], radar_data["z"],
@@ -449,9 +448,9 @@ class Box:
         :return: <np.float: 3, 4>. Bottom corners. First two face forward, last two face backwards.
         """
         return self.corners()[:, [2, 3, 7, 6]]
-
+    
     def render(self,
-               axis: Axes,
+               axis,
                view: np.ndarray = np.eye(3),
                normalize: bool = False,
                colors: Tuple = ('b', 'r', 'k'),
@@ -466,32 +465,17 @@ class Box:
             (<str> or normalized RGB tuple) for front, back and sides.
         :param linewidth: Width in pixel of the box sides.
         """
-        corners = view_points(self.corners(), view, normalize=normalize)[:2, :]
-
-        def draw_rect(selected_corners, color):
-            prev = selected_corners[-1]
-            for corner in selected_corners:
-                axis.plot([prev[0], corner[0]], [prev[1], corner[1]],
-                          color=color, linewidth=linewidth)
-                prev = corner
-
-        # Draw the sides
-        for i in range(4):
-            axis.plot([corners.T[i][0], corners.T[i + 4][0]],
-                      [corners.T[i][1], corners.T[i + 4][1]],
-                      color=colors[2], linewidth=linewidth)
-
-        # Draw front (first 4 corners) and rear (last 4 corners) rectangles(3d)/lines(2d)
-        draw_rect(corners.T[:4], colors[0])
-        draw_rect(corners.T[4:], colors[1])
-
-        # Draw line indicating the front
-        center_bottom_forward = np.mean(corners.T[2:4], axis=0)
-        center_bottom = np.mean(corners.T[[2, 3, 7, 6]], axis=0)
-        axis.plot([center_bottom[0], center_bottom_forward[0]],
-                  [center_bottom[1], center_bottom_forward[1]],
-                  color=colors[0], linewidth=linewidth)
-
+        # Initialize visualization methods
+        try:
+            render_box = getattr(import_module("truckscenes.utils.visualization_utils"),
+                                 "render_box")
+        except ModuleNotFoundError:
+            warnings.warn('''The visualization dependencies are not installed on your system! '''
+                          '''Run 'pip install "truckscenes-devkit[all]"'.''')
+        
+        # Render box
+        render_box(self, axis, view, normalize, colors, linewidth)
+    
     def render_cv2(self,
                    im: np.ndarray,
                    view: np.ndarray = np.eye(3),
@@ -507,35 +491,16 @@ class Box:
         :param colors: ((R, G, B), (R, G, B), (R, G, B)). Colors for front, side & rear.
         :param linewidth: Linewidth for plot.
         """
-        corners = view_points(self.corners(), view, normalize=normalize)[:2, :]
-
-        def draw_rect(selected_corners, color):
-            prev = selected_corners[-1]
-            for corner in selected_corners:
-                cv2.line(im,
-                         (int(prev[0]), int(prev[1])),
-                         (int(corner[0]), int(corner[1])),
-                         color, linewidth)
-                prev = corner
-
-        # Draw the sides
-        for i in range(4):
-            cv2.line(im,
-                     (int(corners.T[i][0]), int(corners.T[i][1])),
-                     (int(corners.T[i + 4][0]), int(corners.T[i + 4][1])),
-                     colors[2][::-1], linewidth)
-
-        # Draw front (first 4 corners) and rear (last 4 corners) rectangles(3d)/lines(2d)
-        draw_rect(corners.T[:4], colors[0][::-1])
-        draw_rect(corners.T[4:], colors[1][::-1])
-
-        # Draw line indicating the front
-        center_bottom_forward = np.mean(corners.T[2:4], axis=0)
-        center_bottom = np.mean(corners.T[[2, 3, 7, 6]], axis=0)
-        cv2.line(im,
-                 (int(center_bottom[0]), int(center_bottom[1])),
-                 (int(center_bottom_forward[0]), int(center_bottom_forward[1])),
-                 colors[0][::-1], linewidth)
+        # Initialize visualization methods
+        try:
+            render_box_cv2 = getattr(import_module("truckscenes.utils.visualization_utils"),
+                                     "render_box_cv2")
+        except ModuleNotFoundError:
+            warnings.warn('''The visualization dependencies are not installed on your system! '''
+                          '''Run 'pip install "truckscenes-devkit[all]"'.''')
+        
+        # Render box
+        render_box_cv2(self, im, view, normalize, colors, linewidth)
 
     def copy(self) -> Box:
         """

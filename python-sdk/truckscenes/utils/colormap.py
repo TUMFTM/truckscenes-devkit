@@ -3,11 +3,6 @@
 
 from typing import Dict, Tuple
 
-from matplotlib import cm
-
-
-colormaps = cm._colormaps
-
 
 def get_colormap() -> Dict[str, Tuple[int, int, int]]:
     """

@@ -26,7 +26,7 @@ def config_factory(configuration_name: str) -> DetectionConfig:
     # Check if config exists
     task = tokens[0]
     this_dir = os.path.dirname(os.path.abspath(__file__))
-    cfg_path = os.path.join(this_dir, '..', task, 'configs', '%s.json' % configuration_name)
+    cfg_path = os.path.join(this_dir, '..', task, 'configs', f'{configuration_name}.json')
     assert os.path.exists(cfg_path), \
         f'Requested unknown configuration {configuration_name}'
 

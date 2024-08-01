@@ -1,10 +1,10 @@
 # Copyright 2021 Motional
 # Copyright 2024 MAN Truck & Bus SE
 
-import json
 from typing import Any
 
 import numpy as np
+
 from matplotlib import pyplot as plt
 
 from truckscenes import TruckScenes
@@ -287,74 +287,3 @@ def summary_plot(md_list: DetectionMetricDataList,
     if savepath is not None:
         plt.savefig(savepath)
         plt.close()
-
-
-def detailed_results_table_tex(metrics_path: str, output_path: str) -> None:
-    """
-    Renders a detailed results table in tex.
-    :param metrics_path: path to a serialized DetectionMetrics file.
-    :param output_path: path to the output file.
-    """
-    with open(metrics_path, 'r') as f:
-        metrics = json.load(f)
-
-    tex = ''
-    tex += '\\begin{table}[]\n'
-    tex += '\\small\n'
-    tex += '\\begin{tabular}{| c | c | c | c | c | c | c |} \\hline\n'
-    tex += '\\textbf{Class}    &   \\textbf{AP}  &   \\textbf{ATE} &   \\textbf{ASE} & ' \
-           '\\textbf{AOE}   & ' \
-           '\\textbf{AVE}   & ' \
-           '\\textbf{AAE}   \\\\ \\hline ' \
-           '\\hline\n'
-    for name in DETECTION_NAMES:
-        ap = np.mean(metrics['label_aps'][name].values()) * 100
-        ate = metrics['label_tp_errors'][name]['trans_err']
-        ase = metrics['label_tp_errors'][name]['scale_err']
-        aoe = metrics['label_tp_errors'][name]['orient_err']
-        ave = metrics['label_tp_errors'][name]['vel_err']
-        aae = metrics['label_tp_errors'][name]['attr_err']
-        tex_name = PRETTY_DETECTION_NAMES[name]
-        if name == 'traffic_cone':
-            tex += f'{tex_name}  &   {ap:.1f}  &   {ate:.2f}  &   {ase:.2f}  &   ' \
-                f'N/A  &   N/A  &   N/A  \\\\ \\hline\n'
-        elif name == 'barrier':
-            tex += f'{tex_name}  &   {ap:.1f}  &   {ate:.2f}  &   {ase:.2f}  &   ' \
-                f'{aoe:.2f}  &   N/A  &   N/A  \\\\ \\hline\n'
-        elif name == 'animal':
-            tex += f'{tex_name}  &   {ap:.1f}  &   {ate:.2f}  &   {ase:.2f}  &   ' \
-                f'{aoe:.2f}  &   {ave:.2f}  &   N/A  \\\\ \\hline\n'
-        elif name == 'traffic_sign':
-            tex += f'{tex_name}  &   {ap:.1f}  &   {ate:.2f}  &   {ase:.2f}  &   ' \
-                f'{aoe:.2f}  &   N/A  &   {aae:.2f}  \\\\ \\hline\n'
-        else:
-            tex += f'{tex_name}  &   {ap:.1f}  &   {ate:.2f}  &   {ase:.2f}  &   ' \
-                f'{aoe:.2f}  &   {ave:.2f}  &   {aae:.2f}  \\\\ \\hline\n'
-
-    map_ = metrics['mean_ap']
-    mate = metrics['tp_errors']['trans_err']
-    mase = metrics['tp_errors']['scale_err']
-    maoe = metrics['tp_errors']['orient_err']
-    mave = metrics['tp_errors']['vel_err']
-    maae = metrics['tp_errors']['attr_err']
-    tex += f'\\hline \\textbf{{Mean}} &   {map_:.1f}  &   {mate:.2f}  &   {mase:.2f}  &   ' \
-        f'{maoe:.2f}  &   {mave:.2f}  &   {maae:.2f}  \\\\ ' \
-        '\\hline\n'
-
-    tex += '\\end{tabular}\n'
-
-    # All one line
-    tex += '\\caption{Detailed detection performance on the val set. \n'
-    tex += 'AP: average precision averaged over distance thresholds (%), \n'
-    tex += 'ATE: average translation error (${}$), \n'.format(TP_METRICS_UNITS['trans_err'])
-    tex += 'ASE: average scale error (${}$), \n'.format(TP_METRICS_UNITS['scale_err'])
-    tex += 'AOE: average orientation error (${}$), \n'.format(TP_METRICS_UNITS['orient_err'])
-    tex += 'AVE: average velocity error (${}$), \n'.format(TP_METRICS_UNITS['vel_err'])
-    tex += 'AAE: average attribute error (${}$). \n'.format(TP_METRICS_UNITS['attr_err'])
-    tex += 'nuScenes Detection Score (NDS) = {:.1f} \n'.format(metrics['nd_score'] * 100)
-    tex += '}\n'
-
-    tex += '\\end{table}\n'
-
-    with open(output_path, 'w') as f:
-        f.write(tex)
