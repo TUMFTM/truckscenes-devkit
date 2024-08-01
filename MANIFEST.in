@@ -1,5 +1,9 @@
 include *.md
+include *.txt
+recursive-include docs *.md
+recursive-include setup *.txt
+recursive-include src *.md
 recursive-include src *.py
 recursive-include src *.json
-global-include LICENSE.txt
+recursive-include tutorials *.ipynb
 prune venv
