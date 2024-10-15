@@ -7,6 +7,7 @@ The first multimodal dataset for autonomous trucking
 [![Python](https://img.shields.io/badge/python-3-blue.svg)](https://www.python.org/downloads/)
 [![Linux](https://img.shields.io/badge/os-linux-blue.svg)](https://www.linux.org/)
 [![Windows](https://img.shields.io/badge/os-windows-blue.svg)](https://www.microsoft.com/windows/)
+[![arXiv](https://img.shields.io/badge/arXiv-Paper-blue.svg)](https://arxiv.org/abs/2407.07462)
 
 </div>
 
@@ -27,7 +28,7 @@ If you also want to install all the (optional) dependencies for running the visu
 pip install "truckscenes-devkit[all]"
 ```
 
-The usage requires Python (install [here](https://www.python.org/downloads/), tested for 3.6 and 3.8) and pip (install [here](https://pip.pypa.io/en/stable/installation/)) for the installation.
+The usage requires Python (install [here](https://www.python.org/downloads/), tested 3.8) and pip (install [here](https://pip.pypa.io/en/stable/installation/)) for the installation.
 
 ## TruckScenes Setup
 The MAN TruckScenes dataset can be downloaded on our [Download page](https://www.man.eu/truckscenes/) or search for TruckScenes in the [AWS Open Data Registry](https://registry.opendata.aws/).  
@@ -47,7 +48,7 @@ If you want to use another folder, specify the `dataroot` parameter of the Truck
 Please follow these steps to make yourself familiar with the MAN TruckScenes dataset:
 - [Download](https://www.man.eu/truckscenes/) the dataset on our website.
 - Make yourself familiar with the [dataset schema](./docs/schema_truckscenes.md)
-- Run the [tutorial](./python-sdk/tutorials/truckscenes_tutorial.ipynb) to get started:
+- Run the [tutorial](./tutorials/truckscenes_tutorial.ipynb) to get started:
   ```
   jupyter notebook $HOME/truckscenes-devkit/tutorials/truckscenes_tutorial.ipynb
   ```
