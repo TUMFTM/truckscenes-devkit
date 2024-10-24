@@ -355,6 +355,198 @@ class TruckScenesExplorer:
         if out_path is not None:
             plt.savefig(out_path)
 
+    def _render_camera_sample_data(self,
+                                   sample_data_token: str,
+                                   with_anns: bool = True,
+                                   selected_anntokens: List[str] = None,
+                                   box_vis_level: BoxVisibility = BoxVisibility.ANY,
+                                   ax: Axes = None) -> None:
+        """
+        Renders camera sample data onto axis.
+
+        Arguments:
+            sample_data_token: Sample_data token.
+            with_anns: Whether to draw box annotations.
+            box_vis_level: If sample_data is an image, this sets required visibility for boxes.
+            axes_limit: Axes limit for lidar and radar (measured in meters).
+            ax: Axes onto which to render.
+            nsweeps: Number of sweeps for lidar and radar.
+            out_path: Optional path to save the rendered figure to disk.
+            use_flat_vehicle_coordinates: Instead of the current sensor's coordinate frame,
+                use ego frame which is aligned to z-plane in the world.
+                Note: Previously this method did not use flat vehicle coordinates, which can lead
+                to small errors when the vertical axis of the global frame and lidar are not
+                aligned. The new setting is more correct and rotates the plot by ~90 degrees.
+            verbose: Whether to display the image after it is rendered.
+        """
+        # Load boxes and image.
+        data_path, boxes, camera_intrinsic = \
+            self.trucksc.get_sample_data(
+                sample_data_token[0], box_vis_level=box_vis_level,
+                selected_anntokens=selected_anntokens
+            )
+        data = Image.open(data_path)
+
+        # Show image.
+        ax.imshow(data)
+
+        # Show boxes.
+        if with_anns:
+            for box in boxes:
+                c = np.array(self.get_color(box.name)) / 255.0
+                box.render(ax, view=camera_intrinsic, normalize=True,
+                           colors=(c, c, c), linewidth=1.0)
+
+        # Limit visible range.
+        ax.set_xlim(0, data.size[0])
+        ax.set_ylim(data.size[1], 0)
+
+    def _render_pc_sample_data(self,
+                               sensor_modality: str,
+                               sample_data_token: str,
+                               with_anns: bool = True,
+                               selected_anntokens: List[str] = None,
+                               box_vis_level: BoxVisibility = BoxVisibility.ANY,
+                               axes_limit: Union[List[float], Tuple[float], float] = 40,
+                               ax: Axes = None,
+                               nsweeps: int = 1,
+                               use_flat_vehicle_coordinates: bool = True,
+                               point_scale: float = 1.0,
+                               cmap: str = 'viridis',
+                               cnorm: bool = True) -> None:
+        """
+        Render lidar sample data onto axis.
+
+        Arguments:
+            sample_data_token: Sample_data token.
+            with_anns: Whether to draw box annotations.
+            box_vis_level: If sample_data is an image, this sets required visibility for boxes.
+            axes_limit: Axes limit for lidar and radar (measured in meters).
+            ax: Axes onto which to render.
+            nsweeps: Number of sweeps for lidar and radar.
+            out_path: Optional path to save the rendered figure to disk.
+            use_flat_vehicle_coordinates: Instead of the current sensor's coordinate frame,
+                use ego frame which is aligned to z-plane in the world.
+                Note: Previously this method did not use flat vehicle coordinates, which can lead
+                to small errors when the vertical axis of the global frame and lidar are not
+                aligned. The new setting is more correct and rotates the plot by ~90 degrees.
+            verbose: Whether to display the image after it is rendered.
+        """
+        points = []
+        intensities = []
+
+        for sd_token in sample_data_token:
+            sd_record = self.trucksc.get('sample_data', sd_token)
+
+            sample_rec = self.trucksc.get('sample', sd_record['sample_token'])
+            chan = sd_record['channel']
+            ref_chan = 'LIDAR_LEFT'
+            ref_sd_token = sample_rec['data'][ref_chan]
+            ref_sd_record = self.trucksc.get('sample_data', ref_sd_token)
+
+            if sensor_modality == 'lidar':
+                # Get aggregated lidar point cloud in lidar frame.
+                pc, _ = LidarPointCloud.from_file_multisweep(self.trucksc, sample_rec,
+                                                             chan, ref_chan,
+                                                             nsweeps=nsweeps)
+                velocities = None
+                intensity = pc.points[3, :]
+            else:
+                # Get aggregated radar point cloud in reference frame.
+                # The point cloud is transformed to the reference frame
+                # for visualization purposes.
+                pc, _ = RadarPointCloud.from_file_multisweep(self.trucksc, sample_rec,
+                                                             chan, ref_chan,
+                                                             nsweeps=nsweeps)
+
+                # Transform radar velocities (x is front, y is left),
+                # as these are not transformed when loading the
+                # point cloud.
+                radar_cs_record = self.trucksc.get('calibrated_sensor',
+                                                   sd_record['calibrated_sensor_token'])
+                ref_cs_record = self.trucksc.get('calibrated_sensor',
+                                                 ref_sd_record['calibrated_sensor_token'])
+                velocities = pc.points[3:5, :]
+                velocities = np.vstack((velocities, np.zeros(pc.points.shape[1])))
+                velocities = np.dot(Quaternion(radar_cs_record['rotation']).rotation_matrix,
+                                    velocities)
+                velocities = np.dot(Quaternion(ref_cs_record['rotation']).rotation_matrix.T,
+                                    velocities)
+                velocities[2, :] = np.zeros(pc.points.shape[1])
+                intensity = pc.points[6, :]
+
+            # By default we render the sample_data top down in the sensor frame.
+            # This is slightly inaccurate when rendering the map as the sensor frame may
+            # not be perfectly upright.
+            if use_flat_vehicle_coordinates:
+                # Retrieve transformation matrices for reference point cloud.
+                cs_record = self.trucksc.get('calibrated_sensor',
+                                             ref_sd_record['calibrated_sensor_token'])
+                pose_record = self.trucksc.get('ego_pose',
+                                               ref_sd_record['ego_pose_token'])
+                ref_to_ego = transform_matrix(translation=cs_record['translation'],
+                                              rotation=Quaternion(cs_record["rotation"]))
+
+                # Compute rotation between 3D vehicle pose and "flat" vehicle pose
+                # (parallel to global z plane).
+                ego_yaw = Quaternion(pose_record['rotation']).yaw_pitch_roll[0]
+                rotation_vehicle_flat_from_vehicle = np.dot(
+                    Quaternion(scalar=np.cos(ego_yaw / 2),
+                               vector=[0, 0, np.sin(ego_yaw / 2)]).rotation_matrix,
+                    Quaternion(pose_record['rotation']).inverse.rotation_matrix)
+                vehicle_flat_from_vehicle = np.eye(4)
+                vehicle_flat_from_vehicle[:3, :3] = rotation_vehicle_flat_from_vehicle
+                viewpoint = np.dot(vehicle_flat_from_vehicle, ref_to_ego)
+
+                # Rotate upwards
+                vehicle_flat_up_from_vehicle_flat = np.eye(4)
+                rotation_axis = Quaternion(matrix=viewpoint[:3, :3])
+                vehicle_flat_up_from_vehicle_flat[:3, :3] = \
+                    Quaternion(axis=rotation_axis.rotate([0, 0, 1]),
+                               angle=np.pi/2).rotation_matrix
+                viewpoint = np.dot(vehicle_flat_up_from_vehicle_flat, viewpoint)
+            else:
+                viewpoint = np.eye(4)
+
+            # Show point cloud
+            points.append(view_points(pc.points[:3, :], viewpoint, normalize=False))
+            intensities.append(intensity)
+
+        points = np.concatenate(points, axis=1)
+        intensities = np.concatenate(intensities, axis=0)
+
+        # Colormapping
+        if cnorm:
+            norm = Normalize(vmin=np.min(intensities), vmax=np.max(intensities), clip=True)
+        else:
+            norm = None
+        mapper = ScalarMappable(norm=norm, cmap=cmap)
+        colors = mapper.to_rgba(intensities)[..., :3]
+
+        point_scale = point_scale * 0.4 if sensor_modality == 'lidar' else point_scale * 3.0
+        ax.scatter(points[0, :], points[1, :], marker='o',
+                   c=colors, s=point_scale, edgecolors='none')
+
+        # Show ego vehicle
+        ax.plot(0, 0, 'x', color='red')
+
+        # Show boxes
+        if with_anns:
+            # Get boxes in lidar frame.box_vis_level
+            _, boxes, _ = self.trucksc.get_sample_data(
+                ref_sd_token, box_vis_level=box_vis_level, selected_anntokens=selected_anntokens,
+                use_flat_vehicle_coordinates=use_flat_vehicle_coordinates
+            )
+
+            # Render boxes
+            for box in boxes:
+                c = np.array(self.get_color(box.name)) / 255.0
+                box.render(ax, view=np.eye(4), colors=(c, c, c), linewidth=2.0)
+
+        # Limit visible range.
+        ax.set_xlim(-axes_limit[0], axes_limit[0])
+        ax.set_ylim(-axes_limit[1], axes_limit[1])
+
     def render_sample_data(self,
                            sample_data_token: str,
                            with_anns: bool = True,
@@ -367,8 +559,7 @@ class TruckScenesExplorer:
                            use_flat_vehicle_coordinates: bool = True,
                            point_scale: float = 1.0,
                            cmap: str = 'viridis',
-                           cnorm: bool = True,
-                           verbose: bool = True) -> None:
+                           cnorm: bool = True) -> None:
         """
         Render sample data onto axis.
 
@@ -401,153 +592,25 @@ class TruckScenesExplorer:
 
         # Render Point Cloud data
         if sensor_modality in ['lidar', 'radar']:
-            points = []
-            intensities = []
+            # Init axes.
+            if ax is None:
+                _, ax = plt.subplots(1, 1, figsize=(9, 9))
 
-            for sd_token in sample_data_token:
-                sd_record = self.trucksc.get('sample_data', sd_token)
-
-                sample_rec = self.trucksc.get('sample', sd_record['sample_token'])
-                chan = sd_record['channel']
-                ref_chan = 'LIDAR_LEFT'
-                ref_sd_token = sample_rec['data'][ref_chan]
-                ref_sd_record = self.trucksc.get('sample_data', ref_sd_token)
-
-                if sensor_modality == 'lidar':
-                    # Get aggregated lidar point cloud in lidar frame.
-                    pc, _ = LidarPointCloud.from_file_multisweep(self.trucksc, sample_rec,
-                                                                 chan, ref_chan,
-                                                                 nsweeps=nsweeps)
-                    velocities = None
-                    intensity = pc.points[3, :]
-                else:
-                    # Get aggregated radar point cloud in reference frame.
-                    # The point cloud is transformed to the reference frame
-                    # for visualization purposes.
-                    pc, _ = RadarPointCloud.from_file_multisweep(self.trucksc, sample_rec,
-                                                                 chan, ref_chan,
-                                                                 nsweeps=nsweeps)
-
-                    # Transform radar velocities (x is front, y is left),
-                    # as these are not transformed when loading the
-                    # point cloud.
-                    radar_cs_record = self.trucksc.get('calibrated_sensor',
-                                                     sd_record['calibrated_sensor_token'])
-                    ref_cs_record = self.trucksc.get('calibrated_sensor',
-                                                   ref_sd_record['calibrated_sensor_token'])
-                    velocities = pc.points[3:5, :]
-                    velocities = np.vstack((velocities, np.zeros(pc.points.shape[1])))
-                    velocities = np.dot(Quaternion(radar_cs_record['rotation']).rotation_matrix,
-                                        velocities)
-                    velocities = np.dot(Quaternion(ref_cs_record['rotation']).rotation_matrix.T,
-                                        velocities)
-                    velocities[2, :] = np.zeros(pc.points.shape[1])
-                    intensity = pc.points[6, :]
-
-                # By default we render the sample_data top down in the sensor frame.
-                # This is slightly inaccurate when rendering the map as the sensor frame may
-                # not be perfectly upright.
-                if use_flat_vehicle_coordinates:
-                    # Retrieve transformation matrices for reference point cloud.
-                    cs_record = self.trucksc.get('calibrated_sensor',
-                                               ref_sd_record['calibrated_sensor_token'])
-                    pose_record = self.trucksc.get('ego_pose',
-                                                 ref_sd_record['ego_pose_token'])
-                    ref_to_ego = transform_matrix(translation=cs_record['translation'],
-                                                  rotation=Quaternion(cs_record["rotation"]))
-
-                    # Compute rotation between 3D vehicle pose and "flat" vehicle pose
-                    # (parallel to global z plane).
-                    ego_yaw = Quaternion(pose_record['rotation']).yaw_pitch_roll[0]
-                    rotation_vehicle_flat_from_vehicle = np.dot(
-                        Quaternion(scalar=np.cos(ego_yaw / 2),
-                                   vector=[0, 0, np.sin(ego_yaw / 2)]).rotation_matrix,
-                        Quaternion(pose_record['rotation']).inverse.rotation_matrix)
-                    vehicle_flat_from_vehicle = np.eye(4)
-                    vehicle_flat_from_vehicle[:3, :3] = rotation_vehicle_flat_from_vehicle
-                    viewpoint = np.dot(vehicle_flat_from_vehicle, ref_to_ego)
-
-                    # Rotate upwards
-                    vehicle_flat_up_from_vehicle_flat = np.eye(4)
-                    rotation_axis = Quaternion(matrix=viewpoint[:3, :3])
-                    vehicle_flat_up_from_vehicle_flat[:3, :3] = \
-                        Quaternion(axis=rotation_axis.rotate([0, 0, 1]),
-                                   angle=np.pi/2).rotation_matrix
-                    viewpoint = np.dot(vehicle_flat_up_from_vehicle_flat, viewpoint)
-                else:
-                    viewpoint = np.eye(4)
-
-                # Init axes.
-                if ax is None:
-                    _, ax = plt.subplots(1, 1, figsize=(9, 9))
-
-                # Show point cloud.
-                points.append(view_points(pc.points[:3, :], viewpoint, normalize=False))
-                intensities.append(intensity)
-
-            points = np.concatenate(points, axis=1)
-            intensities = np.concatenate(intensities, axis=0)
-
-            # Colormapping
-            if cnorm:
-                norm = Normalize(vmin=np.min(intensities), vmax=np.max(intensities), clip=True)
-            else:
-                norm = None
-            mapper = ScalarMappable(norm=norm, cmap=cmap)
-            colors = mapper.to_rgba(intensities)[..., :3]
-
-            point_scale = point_scale * 0.4 if sensor_modality == 'lidar' else point_scale * 3.0
-            ax.scatter(points[0, :], points[1, :], marker='o',
-                       c=colors, s=point_scale, edgecolors='none')
-
-            # Show ego vehicle.
-            ax.plot(0, 0, 'x', color='red')
-
-            # Get boxes in lidar frame.box_vis_level
-            _, boxes, _ = self.trucksc.get_sample_data(
-                ref_sd_token, box_vis_level=box_vis_level, selected_anntokens=selected_anntokens,
-                use_flat_vehicle_coordinates=use_flat_vehicle_coordinates
-            )
-
-            # Show boxes.
-            if with_anns:
-                for box in boxes:
-                    c = np.array(self.get_color(box.name)) / 255.0
-                    box.render(ax, view=np.eye(4), colors=(c, c, c), linewidth=2.0)
-
-            # Limit visible range.
-            ax.set_xlim(-axes_limit[0], axes_limit[0])
-            ax.set_ylim(-axes_limit[1], axes_limit[1])
+            # Render point cloud data onto axis
+            self._render_pc_sample_data(sensor_modality, sample_data_token, with_anns,
+                                        selected_anntokens, box_vis_level, axes_limit,
+                                        ax, nsweeps, use_flat_vehicle_coordinates,
+                                        point_scale, cmap, cnorm)
 
         # Render Camera data
         elif sensor_modality == 'camera':
-            sd_record = self.trucksc.get('sample_data', sample_data_token[0])
-
-            # Load boxes and image.
-            data_path, boxes, camera_intrinsic = \
-                self.trucksc.get_sample_data(
-                    sample_data_token[0], box_vis_level=box_vis_level,
-                    selected_anntokens=selected_anntokens
-                )
-            data = Image.open(data_path)
-
             # Init axes.
             if ax is None:
                 _, ax = plt.subplots(1, 1, figsize=(9, 16))
 
-            # Show image.
-            ax.imshow(data)
-
-            # Show boxes.
-            if with_anns:
-                for box in boxes:
-                    c = np.array(self.get_color(box.name)) / 255.0
-                    box.render(ax, view=camera_intrinsic, normalize=True,
-                               colors=(c, c, c), linewidth=1.0)
-
-            # Limit visible range.
-            ax.set_xlim(0, data.size[0])
-            ax.set_ylim(data.size[1], 0)
+            # Render camera data onto axis
+            self._render_camera_sample_data(sample_data_token, with_anns, selected_anntokens,
+                                            box_vis_level, ax)
 
         else:
             raise ValueError("Error: Unknown sensor modality!")
@@ -589,8 +652,8 @@ class TruckScenesExplorer:
         cams = [key for key in sample_record['data'].keys() if 'CAMERA' in key]
         for cam in cams:
             _, boxes, _ = self.trucksc.get_sample_data(sample_record['data'][cam],
-                                                     box_vis_level=box_vis_level,
-                                                     selected_anntokens=[anntoken])
+                                                       box_vis_level=box_vis_level,
+                                                       selected_anntokens=[anntoken])
             if len(boxes) > 0:
                 break  # We found an image that matches. Let's abort.
         assert len(boxes) > 0, 'Error: Could not find image where annotation is visible. ' \
@@ -642,7 +705,8 @@ class TruckScenesExplorer:
             lidar_points = ann_record['num_lidar_pts']
             radar_points = ann_record['num_radar_pts']
 
-            sample_data_record = self.trucksc.get('sample_data', sample_record['data']['LIDAR_LEFT'])
+            sample_data_record = self.trucksc.get('sample_data',
+                                                  sample_record['data']['LIDAR_LEFT'])
             pose_record = self.trucksc.get('ego_pose', sample_data_record['ego_pose_token'])
             dist = np.linalg.norm(
                 np.array(pose_record['translation']) - np.array(ann_record['translation'])
@@ -684,12 +748,14 @@ class TruckScenesExplorer:
             out_path: Optional path to save the rendered figure to disk.
             extra_info: Whether to render extra information below camera view.
         """
-        ann_tokens = self.trucksc.field2token('sample_annotation', 'instance_token', instance_token)
+        ann_tokens = self.trucksc.field2token('sample_annotation', 'instance_token',
+                                              instance_token)
         closest = [np.inf, None]
         for ann_token in ann_tokens:
             ann_record = self.trucksc.get('sample_annotation', ann_token)
             sample_record = self.trucksc.get('sample', ann_record['sample_token'])
-            sample_data_record = self.trucksc.get('sample_data', sample_record['data']['LIDAR_LEFT'])
+            sample_data_record = self.trucksc.get('sample_data',
+                                                  sample_record['data']['LIDAR_LEFT'])
             pose_record = self.trucksc.get('ego_pose', sample_data_record['ego_pose_token'])
             dist = np.linalg.norm(
                 np.array(pose_record['translation']) - np.array(ann_record['translation'])
@@ -757,7 +823,7 @@ class TruckScenesExplorer:
         prev_recs = {}  # Hold the previous displayed record by channel.
         for channel in layout:
             current_recs[channel] = self.trucksc.get('sample_data',
-                                                   first_sample_rec['data'][channel])
+                                                     first_sample_rec['data'][channel])
             prev_recs[channel] = None
 
         current_time = first_sample_rec['timestamp']
@@ -1059,41 +1125,41 @@ def render_box(box,
                normalize: bool = False,
                colors: Tuple = ('b', 'r', 'k'),
                linewidth: float = 2) -> None:
-        """
-        Renders the box in the provided Matplotlib axis.
-        :param axis: Axis onto which the box should be drawn.
-        :param view: <np.array: 3, 3>. Define a projection in needed
-            (e.g. for drawing projection in an image).
-        :param normalize: Whether to normalize the remaining coordinate.
-        :param colors: (<Matplotlib.colors>: 3). Valid Matplotlib colors
-            (<str> or normalized RGB tuple) for front, back and sides.
-        :param linewidth: Width in pixel of the box sides.
-        """
-        corners = view_points(box.corners(), view, normalize=normalize)[:2, :]
+    """
+    Renders the box in the provided Matplotlib axis.
+    :param axis: Axis onto which the box should be drawn.
+    :param view: <np.array: 3, 3>. Define a projection in needed
+        (e.g. for drawing projection in an image).
+    :param normalize: Whether to normalize the remaining coordinate.
+    :param colors: (<Matplotlib.colors>: 3). Valid Matplotlib colors
+        (<str> or normalized RGB tuple) for front, back and sides.
+    :param linewidth: Width in pixel of the box sides.
+    """
+    corners = view_points(box.corners(), view, normalize=normalize)[:2, :]
 
-        def draw_rect(selected_corners, color):
-            prev = selected_corners[-1]
-            for corner in selected_corners:
-                axis.plot([prev[0], corner[0]], [prev[1], corner[1]],
-                          color=color, linewidth=linewidth)
-                prev = corner
+    def draw_rect(selected_corners, color):
+        prev = selected_corners[-1]
+        for corner in selected_corners:
+            axis.plot([prev[0], corner[0]], [prev[1], corner[1]],
+                      color=color, linewidth=linewidth)
+            prev = corner
 
-        # Draw the sides
-        for i in range(4):
-            axis.plot([corners.T[i][0], corners.T[i + 4][0]],
-                      [corners.T[i][1], corners.T[i + 4][1]],
-                      color=colors[2], linewidth=linewidth)
+    # Draw the sides
+    for i in range(4):
+        axis.plot([corners.T[i][0], corners.T[i + 4][0]],
+                  [corners.T[i][1], corners.T[i + 4][1]],
+                  color=colors[2], linewidth=linewidth)
 
-        # Draw front (first 4 corners) and rear (last 4 corners) rectangles(3d)/lines(2d)
-        draw_rect(corners.T[:4], colors[0])
-        draw_rect(corners.T[4:], colors[1])
+    # Draw front (first 4 corners) and rear (last 4 corners) rectangles(3d)/lines(2d)
+    draw_rect(corners.T[:4], colors[0])
+    draw_rect(corners.T[4:], colors[1])
 
-        # Draw line indicating the front
-        center_bottom_forward = np.mean(corners.T[2:4], axis=0)
-        center_bottom = np.mean(corners.T[[2, 3, 7, 6]], axis=0)
-        axis.plot([center_bottom[0], center_bottom_forward[0]],
-                  [center_bottom[1], center_bottom_forward[1]],
-                  color=colors[0], linewidth=linewidth)
+    # Draw line indicating the front
+    center_bottom_forward = np.mean(corners.T[2:4], axis=0)
+    center_bottom = np.mean(corners.T[[2, 3, 7, 6]], axis=0)
+    axis.plot([center_bottom[0], center_bottom_forward[0]],
+              [center_bottom[1], center_bottom_forward[1]],
+              color=colors[0], linewidth=linewidth)
 
 
 def render_box_cv2(box,

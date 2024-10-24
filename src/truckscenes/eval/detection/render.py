@@ -15,8 +15,6 @@ from truckscenes.eval.detection.constants import TP_METRICS, DETECTION_NAMES, DE
     TP_METRICS_UNITS, PRETTY_DETECTION_NAMES, PRETTY_TP_METRICS
 from truckscenes.eval.detection.data_classes import DetectionMetrics, DetectionMetricData, \
     DetectionMetricDataList
-from truckscenes.utils.data_classes import LidarPointCloud
-from truckscenes.utils.geometry_utils import view_points
 
 Axis = Any
 
@@ -47,36 +45,34 @@ def visualize_sample(trucksc: TruckScenes,
     sd_record = trucksc.get('sample_data', sample_rec['data']['LIDAR_LEFT'])
     cs_record = trucksc.get('calibrated_sensor', sd_record['calibrated_sensor_token'])
     pose_record = trucksc.get('ego_pose', sd_record['ego_pose_token'])
+    sample_data_token = [
+        sample_rec['data'][sensor] for sensor in sample_rec['data'] if 'lidar' in sensor.lower()
+    ]
 
     # Get boxes.
     boxes_gt_global = gt_boxes[sample_token]
     boxes_est_global = pred_boxes[sample_token]
 
     # Map GT boxes to lidar.
-    boxes_gt = boxes_to_sensor(boxes_gt_global, pose_record, cs_record)
+    boxes_gt = boxes_to_sensor(boxes_gt_global, pose_record, cs_record,
+                               use_flat_vehicle_coordinates=True)
 
     # Map EST boxes to lidar.
-    boxes_est = boxes_to_sensor(boxes_est_global, pose_record, cs_record)
+    boxes_est = boxes_to_sensor(boxes_est_global, pose_record, cs_record,
+                                use_flat_vehicle_coordinates=True)
 
     # Add scores to EST boxes.
     for box_est, box_est_global in zip(boxes_est, boxes_est_global):
         box_est.score = box_est_global.detection_score
 
-    # Get point cloud in lidar frame.
-    pc, _ = LidarPointCloud.from_file_multisweep(
-        trucksc, sample_rec, 'LIDAR_LEFT', 'LIDAR_LEFT', nsweeps=nsweeps)
-
     # Init axes.
     _, ax = plt.subplots(1, 1, figsize=(9, 9))
+    axes_limit = eval_range + 3  # Slightly bigger to include boxes that extend beyond the range.
 
-    # Show point cloud.
-    points = view_points(pc.points[:3, :], np.eye(4), normalize=False)
-    dists = np.sqrt(np.sum(pc.points[:2, :] ** 2, axis=0))
-    colors = np.minimum(1, dists / eval_range)
-    ax.scatter(points[0, :], points[1, :], c=colors, s=0.2)
-
-    # Show ego vehicle.
-    ax.plot(0, 0, 'x', color='black')
+    # Render lidar point cloud
+    trucksc.render_sample_data(sample_data_token=sample_data_token, with_anns=False,
+                               axes_limit=axes_limit, ax=ax, nsweeps=nsweeps,
+                               use_flat_vehicle_coordinates=True)
 
     # Show GT boxes.
     for box in boxes_gt:
@@ -90,7 +86,6 @@ def visualize_sample(trucksc: TruckScenes,
             box.render(ax, view=np.eye(4), colors=('b', 'b', 'b'), linewidth=1)
 
     # Limit visible range.
-    axes_limit = eval_range + 3  # Slightly bigger to include boxes that extend beyond the range.
     ax.set_xlim(-axes_limit, axes_limit)
     ax.set_ylim(-axes_limit, axes_limit)
 

@@ -301,34 +301,18 @@ class TruckScenes:
         else:
             boxes = self.get_boxes(sample_data_token)
 
-        # Make list of Box objects including coord system transforms.
-        box_list = []
-        for box in boxes:
-            if use_flat_vehicle_coordinates:
-                # Move box to ego vehicle coord system parallel to world z plane.
-                sd_yaw = Quaternion(s_pose_record['rotation']).yaw_pitch_roll[0]
-                box.translate(-np.array(s_pose_record['translation']))
-                box.rotate(Quaternion(scalar=np.cos(sd_yaw / 2),
-                                      vector=[0, 0, np.sin(sd_yaw / 2)]).inverse)
+        # Map boxes to sensor coordinate system.
+        boxes = self.boxes_to_sensor(boxes=boxes, pose_record=s_pose_record, cs_record=cs_record,
+                                     use_flat_vehicle_coordinates=use_flat_vehicle_coordinates)
 
-                # Rotate upwards
-                box.rotate(Quaternion(axis=box.orientation.rotate([0, 0, 1]), angle=np.pi/2))
-            else:
-                # Move box to ego vehicle coord system.
-                box.translate(-np.array(s_pose_record['translation']))
-                box.rotate(Quaternion(s_pose_record['rotation']).inverse)
+        # Remove boxes that outside the image
+        if sensor_record['modality'] == 'camera':
+            boxes = [
+                box for box in boxes
+                if box_in_image(box, cam_intrinsic, imsize, vis_level=box_vis_level)
+            ]
 
-                # Move box to sensor coord system.
-                box.translate(-np.array(cs_record['translation']))
-                box.rotate(Quaternion(cs_record['rotation']).inverse)
-
-            if sensor_record['modality'] == 'camera' and not \
-                    box_in_image(box, cam_intrinsic, imsize, vis_level=box_vis_level):
-                continue
-
-            box_list.append(box)
-
-        return data_path, box_list, cam_intrinsic
+        return data_path, boxes, cam_intrinsic
 
     def get_box(self, sample_annotation_token: str) -> Box:
         """
@@ -409,6 +393,42 @@ class TruckScenes:
 
                 boxes.append(box)
         return boxes
+
+    def boxes_to_sensor(self,
+                        boxes: List[Box],
+                        pose_record: Dict,
+                        cs_record: Dict,
+                        use_flat_vehicle_coordinates: bool = False) -> List[Box]:
+        """
+        Map boxes from global coordinates to the vehicle's sensor coordinate system.
+        :param boxes: The boxes in global coordinates.
+        :param pose_record: The pose record of the vehicle at the current timestamp.
+        :param cs_record: The calibrated sensor record of the sensor.
+        :return: The transformed boxes.
+        """
+        boxes_out = []
+        for box in boxes:
+            if use_flat_vehicle_coordinates:
+                # Move box to ego vehicle coord system parallel to world z plane.
+                sd_yaw = Quaternion(pose_record['rotation']).yaw_pitch_roll[0]
+                box.translate(-np.array(pose_record['translation']))
+                box.rotate(Quaternion(scalar=np.cos(sd_yaw / 2),
+                                      vector=[0, 0, np.sin(sd_yaw / 2)]).inverse)
+
+                # Rotate upwards
+                box.rotate(Quaternion(axis=box.orientation.rotate([0, 0, 1]), angle=np.pi/2))
+            else:
+                # Move box to ego vehicle coord system.
+                box.translate(-np.array(pose_record['translation']))
+                box.rotate(Quaternion(pose_record['rotation']).inverse)
+
+                # Move box to sensor coord system.
+                box.translate(-np.array(cs_record['translation']))
+                box.rotate(Quaternion(cs_record['rotation']).inverse)
+
+            boxes_out.append(box)
+
+        return boxes_out
 
     def box_velocity(self, sample_annotation_token: str, max_time_diff: float = 1.5) -> np.ndarray:
         """
@@ -499,7 +519,7 @@ class TruckScenes:
     def render_sample_data(self, sample_data_token: str,
                            with_anns: bool = True, selected_anntokens: List[str] = None,
                            box_vis_level: BoxVisibility = BoxVisibility.ANY,
-                           axes_limit: float = 40, ax = None,
+                           axes_limit: float = 40, ax=None,
                            nsweeps: int = 1, out_path: str = None,
                            use_flat_vehicle_coordinates: bool = True,
                            point_scale: float = 1.0,

@@ -129,7 +129,7 @@ class PointCloud(ABC):
 
             # Homogeneous transformation matrix from sensor coordinate frame to ego car frame.
             current_cs_rec = trucksc.get('calibrated_sensor',
-                                       current_sd_rec['calibrated_sensor_token'])
+                                         current_sd_rec['calibrated_sensor_token'])
             car_from_current = transform_matrix(current_cs_rec['translation'],
                                                 Quaternion(current_cs_rec['rotation']),
                                                 inverse=False)
@@ -448,7 +448,7 @@ class Box:
         :return: <np.float: 3, 4>. Bottom corners. First two face forward, last two face backwards.
         """
         return self.corners()[:, [2, 3, 7, 6]]
-    
+
     def render(self,
                axis,
                view: np.ndarray = np.eye(3),
@@ -472,10 +472,10 @@ class Box:
         except ModuleNotFoundError:
             warnings.warn('''The visualization dependencies are not installed on your system! '''
                           '''Run 'pip install "truckscenes-devkit[all]"'.''')
-        
+
         # Render box
         render_box(self, axis, view, normalize, colors, linewidth)
-    
+
     def render_cv2(self,
                    im: np.ndarray,
                    view: np.ndarray = np.eye(3),
@@ -498,7 +498,7 @@ class Box:
         except ModuleNotFoundError:
             warnings.warn('''The visualization dependencies are not installed on your system! '''
                           '''Run 'pip install "truckscenes-devkit[all]"'.''')
-        
+
         # Render box
         render_box_cv2(self, im, view, normalize, colors, linewidth)
 

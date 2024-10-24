@@ -218,20 +218,20 @@ class DetectionEval:
                 return os.path.join(self.plot_dir, name + '.pdf')
 
             summary_plot(md_list, metrics, min_precision=self.cfg.min_precision,
-                        min_recall=self.cfg.min_recall, dist_th_tp=self.cfg.dist_th_tp,
-                        savepath=savepath('summary'))
+                         min_recall=self.cfg.min_recall, dist_th_tp=self.cfg.dist_th_tp,
+                         savepath=savepath('summary'))
 
             for detection_name in self.cfg.class_names:
                 class_pr_curve(md_list, metrics, detection_name, self.cfg.min_precision,
-                            self.cfg.min_recall, savepath=savepath(detection_name + '_pr'))
+                               self.cfg.min_recall, savepath=savepath(detection_name + '_pr'))
 
                 class_tp_curve(md_list, metrics, detection_name, self.cfg.min_recall,
-                            self.cfg.dist_th_tp, savepath=savepath(detection_name + '_tp'))
+                               self.cfg.dist_th_tp, savepath=savepath(detection_name + '_tp'))
 
             for dist_th in self.cfg.dist_ths:
-                dist_pr_curve(md_list, metrics, dist_th, self.cfg.min_precision, self.cfg.min_recall,
-                            savepath=savepath('dist_pr_' + str(dist_th)))
-            
+                dist_pr_curve(md_list, metrics, dist_th, self.cfg.min_precision,
+                              self.cfg.min_recall, savepath=savepath('dist_pr_' + str(dist_th)))
+
     def _plot_examples(self, plot_examples: int) -> None:
         """
         Plot randomly selected examples.

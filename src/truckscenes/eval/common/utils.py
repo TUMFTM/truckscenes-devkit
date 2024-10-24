@@ -148,12 +148,18 @@ def quaternion_yaw(q: Quaternion) -> float:
     return yaw
 
 
-def boxes_to_sensor(boxes: List[EvalBox], pose_record: Dict, cs_record: Dict):
+def boxes_to_sensor(boxes: List[EvalBox], pose_record: Dict, cs_record: Dict,
+                    use_flat_vehicle_coordinates: bool = False) -> List[EvalBox]:
     """
     Map boxes from global coordinates to the vehicle's sensor coordinate system.
     :param boxes: The boxes in global coordinates.
     :param pose_record: The pose record of the vehicle at the current timestamp.
     :param cs_record: The calibrated sensor record of the sensor.
+    :param use_flat_vehicle_coordinates: Instead of the current sensor's coordinate frame,
+                use ego frame which is aligned to z-plane in the world.
+                Note: Previously this method did not use flat vehicle coordinates, which can lead
+                to small errors when the vertical axis of the global frame and lidar are not
+                aligned. The new setting is more correct and rotates the plot by ~90 degrees.
     :return: The transformed boxes.
     """
     boxes_out = []
@@ -161,13 +167,23 @@ def boxes_to_sensor(boxes: List[EvalBox], pose_record: Dict, cs_record: Dict):
         # Create Box instance.
         box = Box(box.translation, box.size, Quaternion(box.rotation))
 
-        # Move box to ego vehicle coord system.
-        box.translate(-np.array(pose_record['translation']))
-        box.rotate(Quaternion(pose_record['rotation']).inverse)
+        if use_flat_vehicle_coordinates:
+            # Move box to ego vehicle coord system parallel to world z plane.
+            sd_yaw = Quaternion(pose_record['rotation']).yaw_pitch_roll[0]
+            box.translate(-np.array(pose_record['translation']))
+            box.rotate(Quaternion(scalar=np.cos(sd_yaw / 2),
+                                  vector=[0, 0, np.sin(sd_yaw / 2)]).inverse)
 
-        #  Move box to sensor coord system.
-        box.translate(-np.array(cs_record['translation']))
-        box.rotate(Quaternion(cs_record['rotation']).inverse)
+            # Rotate upwards
+            box.rotate(Quaternion(axis=box.orientation.rotate([0, 0, 1]), angle=np.pi/2))
+        else:
+            # Move box to ego vehicle coord system.
+            box.translate(-np.array(pose_record['translation']))
+            box.rotate(Quaternion(pose_record['rotation']).inverse)
+
+            # Move box to sensor coord system.
+            box.translate(-np.array(cs_record['translation']))
+            box.rotate(Quaternion(cs_record['rotation']).inverse)
 
         boxes_out.append(box)
 
