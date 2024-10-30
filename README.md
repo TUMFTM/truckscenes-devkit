@@ -31,7 +31,9 @@ pip install "truckscenes-devkit[all]"
 The usage requires Python (install [here](https://www.python.org/downloads/), tested 3.8) and pip (install [here](https://pip.pypa.io/en/stable/installation/)) for the installation.
 
 ## TruckScenes Setup
-The MAN TruckScenes dataset can be downloaded on our [Download page](https://www.man.eu/truckscenes/) or search for TruckScenes in the [AWS Open Data Registry](https://registry.opendata.aws/).  
+The MAN TruckScenes dataset will be made available on our [Download page](https://www.man.eu/truckscenes/) and the [AWS Open Data Registry](https://registry.opendata.aws/).  
+
+Until the full dataset becomes available, we provide a mini version of the dataset that can be downloaded [here](https://syncandshare.lrz.de/getlink/fiVtqktQEgRDDMayThkeFR/truckscenes.zip).
 
 For the devkit to work you will need to download **all** archives.  
 Please unpack the archives to the `/data/truckscenes` folder **without** overwriting folders that occur in multiple archives.  
