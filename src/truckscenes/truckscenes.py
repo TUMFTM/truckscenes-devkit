@@ -523,7 +523,6 @@ class TruckScenes:
                            nsweeps: int = 1, out_path: str = None,
                            use_flat_vehicle_coordinates: bool = True,
                            point_scale: float = 1.0,
-                           verbose: bool = True,
                            cmap: str = 'viridis',
                            cnorm: bool = True) -> None:
         self.explorer.render_sample_data(sample_data_token=sample_data_token,
@@ -536,7 +535,6 @@ class TruckScenes:
                                          out_path=out_path,
                                          use_flat_vehicle_coordinates=use_flat_vehicle_coordinates,
                                          point_scale=point_scale,
-                                         verbose=verbose,
                                          cmap=cmap,
                                          cnorm=cnorm)
 

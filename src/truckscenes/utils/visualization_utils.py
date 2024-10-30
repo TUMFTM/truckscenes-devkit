@@ -324,7 +324,7 @@ class TruckScenesExplorer:
             for i, (_, sd_token) in enumerate(radar_data.items()):
                 ax: Axes = axes.flatten()[ax_count]
                 self.render_sample_data(sd_token, with_anns=i == 0, box_vis_level=box_vis_level,
-                                        axes_limit=(84, 40), ax=ax, nsweeps=nsweeps, verbose=False)
+                                        axes_limit=(84, 40), ax=ax, nsweeps=nsweeps)
             ax_count += 1
             ax.set_title('Fused RADARs')
 
@@ -333,7 +333,7 @@ class TruckScenesExplorer:
             for i, (_, sd_token) in enumerate(lidar_data.items()):
                 ax: Axes = axes.flatten()[ax_count]
                 self.render_sample_data(sd_token, with_anns=i == 0, box_vis_level=box_vis_level,
-                                        axes_limit=(84, 40), ax=ax, nsweeps=nsweeps, verbose=False)
+                                        axes_limit=(84, 40), ax=ax, nsweeps=nsweeps)
             ax_count += 1
             ax.set_title('Fused LIDARs')
 
@@ -342,7 +342,7 @@ class TruckScenesExplorer:
             for i, (_, sd_token) in enumerate(camera_data.items()):
                 ax: Axes = axes.flatten()[ax_count]
                 self.render_sample_data(sd_token, box_vis_level=box_vis_level,
-                                        ax=ax, nsweeps=nsweeps, verbose=False)
+                                        ax=ax, nsweeps=nsweeps)
                 ax_count += 1
 
         # Change plot settings and write to disk.
