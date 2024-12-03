@@ -368,7 +368,7 @@ if __name__ == "__main__":
                         help='Folder to store result metrics, graphs and example visualizations.')
     parser.add_argument('--eval_set', type=str, default='val',
                         help='Which dataset split to evaluate on, train, val or test.')
-    parser.add_argument('--dataroot', type=str, default='/data/truckscenes',
+    parser.add_argument('--dataroot', type=str, default='/data/man-truckscenes',
                         help='Default TruckScenes data directory.')
     parser.add_argument('--version', type=str, default='v1.0-trainval',
                         help='Which version of the TruckScenes dataset to evaluate on')

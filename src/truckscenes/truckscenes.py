@@ -35,7 +35,7 @@ class TruckScenes:
 
     def __init__(self,
                  version: str = 'v1.0-mini',
-                 dataroot: str = '/data/truckscenes',
+                 dataroot: str = '/data/man-truckscenes',
                  verbose: bool = True):
         """
         Loads database and creates reverse indexes and shortcuts.
