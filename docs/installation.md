@@ -11,12 +11,12 @@ We provide step-by-step instructions to install our devkit.
 
 ## Download
 
-Download the devkit to your home directory.
+Download the [truckscenes-devkit](https://github.com/TUMFTM/truckscenes-devkit) to your home directory.
 
 ## Install Python
+The devkit is tested for Python 3.8 - 3.11 (recommended Python 3.8).  
 
-The devkit is tested for Python 3.6 onwards, but we recommend to use Python 3.8.
-For Ubuntu: If the right Python version is not already installed on your system, install it by running:
+**Ubuntu**  
 ```
 sudo apt update
 sudo apt install software-properties-common
@@ -25,26 +25,28 @@ sudo apt update
 sudo apt install python3.8
 sudo apt install python3.8-dev
 ```
-For Windows or Mac OS see `https://www.python.org/downloads/`.
 
------
+**Windows**  
+Install python: [https://www.python.org/downloads/](https://www.python.org/downloads/)  
+
+**Mac OS**  
+Install python: [https://www.python.org/downloads/](https://www.python.org/downloads/)
+
 ## Setup a virtual environment
 For setting up a virtual environment we use venv.
 
 #### Install venv
-To install venv, run:
 ```
 sudo apt-get install python3-venv 
 ```
 
-#### Create the virtual environment
-We create a new virtual environment named `venv`.
+#### Create the virtual environment named `venv`
 ```
 python3 -m venv venv
 ```
 
 #### Activate the virtual environment
-If you are inside the virtual environment, your shell prompt should look like: `(venv) user@computer:~$`
+If you are inside the virtual environment, your shell prompt should look like: `(venv) user@computer:~$`  
 If that is not the case, you can enable the virtual environment using:
 ```
 source venv/bin/activate
@@ -74,10 +76,10 @@ pip install -r setup/requirements/requirements_<>.txt
 ``` 
 
 ## Setup environment variable
-Finally, if you want to run the unit tests you need to point the devkit to the `truckscenes` folder on your disk.
+Finally, if you want to run the unit tests you need to point the devkit to the `truckscenes` folder on your disk.  
 Set the TRUCKSCENES environment variable to point to your data folder:
 ```
-export TRUCKSCENES="/data/truckscenes"
+export TRUCKSCENES="/data/man-truckscenes"
 ```
 
 ## Setup Matplotlib backend
@@ -95,8 +97,8 @@ backend: TKAgg
 ## Verify install
 To verify your environment run `python -m unittest` in the `test` folder.
 
-That's it you should be good to go!
-
+That's it you should be good to go!  
+<br/><br/>
 
 
 
