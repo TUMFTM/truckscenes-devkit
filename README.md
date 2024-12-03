@@ -2,7 +2,7 @@
 
 <h1>MAN TruckScenes devkit</h1>
 
-The first multimodal dataset for autonomous trucking
+World's First Public Dataset For Autonomous Trucking
 
 [![Python](https://img.shields.io/badge/python-3-blue.svg)](https://www.python.org/downloads/)
 [![Linux](https://img.shields.io/badge/os-linux-blue.svg)](https://www.linux.org/)
