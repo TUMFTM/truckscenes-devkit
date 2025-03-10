@@ -326,6 +326,30 @@ class RadarPointCloud(PointCloud):
                            radar_data["rcs"]], dtype=np.float64)
 
         return cls(points)
+    
+    def rotate(self, rot_matrix: np.ndarray) -> None:
+        """
+        Applies a rotation.
+        :param rot_matrix: <np.float: 3, 3>. Rotation matrix.
+        """
+        # Rotate the point cloud positions
+        self.points[:3, :] = np.dot(rot_matrix, self.points[:3, :])
+        # Rotate the velocity vectors
+        self.points[3:6, :] = np.dot(rot_matrix, self.points[3:6, :])
+
+    def transform(self, transf_matrix: np.ndarray) -> None:
+        """
+        Applies a homogeneous transform.
+        :param transf_matrix: <np.float: 4, 4>. Homogenous transformation matrix.
+        """
+        # Transform the point cloud positions
+        self.points[:3, :] = transf_matrix.dot(
+            np.vstack((self.points[:3, :], np.ones(self.nbr_points())))
+        )[:3, :]
+        # Transform the velocity vectors
+        self.points[3:6, :] = np.dot(np.hstack((transf_matrix[:, :3], np.identity(4)[:, 3][:, None])),
+            np.vstack((self.points[3:6, :], np.ones(self.nbr_points())))
+        )[:3, :]
 
 
 class Box:
