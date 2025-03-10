@@ -9,7 +9,7 @@ World's First Public Dataset For Autonomous Trucking
 [![Windows](https://img.shields.io/badge/os-windows-blue.svg)](https://www.microsoft.com/windows/)
 [![arXiv](https://img.shields.io/badge/arXiv-Paper-blue.svg)](https://arxiv.org/abs/2407.07462)
 
-[![Watch the video](https://private-user-images.githubusercontent.com/58326831/392028903-651a88be-f698-469b-9059-13374eddb9ae.jpg?jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTUiLCJleHAiOjE3MzMyNDAxMTQsIm5iZiI6MTczMzIzOTgxNCwicGF0aCI6Ii81ODMyNjgzMS8zOTIwMjg5MDMtNjUxYTg4YmUtZjY5OC00NjliLTkwNTktMTMzNzRlZGRiOWFlLmpwZz9YLUFtei1BbGdvcml0aG09QVdTNC1ITUFDLVNIQTI1NiZYLUFtei1DcmVkZW50aWFsPUFLSUFWQ09EWUxTQTUzUFFLNFpBJTJGMjAyNDEyMDMlMkZ1cy1lYXN0LTElMkZzMyUyRmF3czRfcmVxdWVzdCZYLUFtei1EYXRlPTIwMjQxMjAzVDE1MzAxNFomWC1BbXotRXhwaXJlcz0zMDAmWC1BbXotU2lnbmF0dXJlPWJmNDJhODQ0OWM4MzZmMjk1MzI5NWFkYzBkNWE2ZWZiYmRiOTlkMWI2MTlhODM0ODg2NTJlOTc0Nzk5YzM3YWUmWC1BbXotU2lnbmVkSGVhZGVycz1ob3N0In0.5OYKZZ7lkcxoP8FGQkiDHdtoTXwYG_0P4J5BwQ11tgE)](https://cdn-assets-eu.frontify.com/s3/frontify-enterprise-files-eu/eyJwYXRoIjoibWFuXC9maWxlXC9lb2s3TGF5V1RXMXYxZU1TUk02US5tcDQifQ:man:MuLfMZFfol1xfBIL7rNw0W4SqczZqwTuzhvI-yxJmdY?width={width}&format=mp4)
+[![Watch the video](https://raw.githubusercontent.com/ffent/truckscenes-media/main/thumbnail.jpg)](https://cdn-assets-eu.frontify.com/s3/frontify-enterprise-files-eu/eyJwYXRoIjoibWFuXC9maWxlXC9lb2s3TGF5V1RXMXYxZU1TUk02US5tcDQifQ:man:MuLfMZFfol1xfBIL7rNw0W4SqczZqwTuzhvI-yxJmdY?width={width}&format=mp4)
 
 </div>
 
