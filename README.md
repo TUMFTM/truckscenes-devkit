@@ -59,13 +59,16 @@ Please follow these steps to make yourself familiar with the MAN TruckScenes dat
 
 ## 📄 Citation
 ```
-@article{truckscenes2024,
-  title={MAN TruckScenes: A multimodal dataset for autonomous trucking in diverse conditions},
-  author={Fent, Felix and Kuttenreich, Fabian and Ruch, Florian and Rizwin, Farija and
-    Juergens, Stefan and Lechermann, Lorenz and Nissler, Christian and Perl, Andrea and
-    Voll, Ulrich and Yan, Min and Lienkamp, Markus},
-  journal={arXiv preprint arXiv:2407.07462},
-  year={2024}
+@inproceedings{truckscenes2024,
+ title = {MAN TruckScenes: A multimodal dataset for autonomous trucking in diverse conditions},
+ author = {Fent, Felix and Kuttenreich, Fabian and Ruch, Florian and Rizwin, Farija and Juergens, Stefan and Lechermann, Lorenz and Nissler, Christian and Perl, Andrea and Voll, Ulrich and Yan, Min and Lienkamp, Markus},
+ booktitle = {Advances in Neural Information Processing Systems},
+ editor = {A. Globerson and L. Mackey and D. Belgrave and A. Fan and U. Paquet and J. Tomczak and C. Zhang},
+ pages = {62062--62082},
+ publisher = {Curran Associates, Inc.},
+ url = {https://proceedings.neurips.cc/paper_files/paper/2024/file/71ac06f0f8450e7d49063c7bfb3257c2-Paper-Datasets_and_Benchmarks_Track.pdf},
+ volume = {37},
+ year = {2024}
 }
 ```
 
