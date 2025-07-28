@@ -14,16 +14,16 @@ World's First Public Dataset For Autonomous Trucking
 </div>
 
 ## Overview
-- [Website](#🌐-website)
-- [Installation](#💾-installation)
-- [Setup](#🔨-setup)
-- [Usage](#🚀-usage)
-- [Citation](#📄-citation)
+- 🌐 [Website](#website)
+- 💾 [Installation](#installation)
+- 🔨 [Setup](#setup)
+- 🚀 [Usage](#usage)
+- 📄 [Citation](#citation)
 
-## 🌐 Website
+## Website
 To read more about the dataset or download it, please visit [https://www.man.eu/truckscenes](https://www.man.eu/truckscenes)
 
-## 💾 Installation
+## Installation
 Our devkit is available and can be installed via pip:
 ```
 pip install truckscenes-devkit
@@ -36,7 +36,7 @@ pip install "truckscenes-devkit[all]"
 
 For more details on the installation see [installation](./docs/installation.md)
 
-## 🔨 Setup
+## Setup
 Download **all** archives from our [download page](https://www.man.eu/truckscenes/) or the [AWS Open Data Registry](https://registry.opendata.aws/).  
 
 Unpack the archives to the `/data/man-truckscenes` folder **without** overwriting folders that occur in multiple archives.  
@@ -48,7 +48,7 @@ Eventually you should have the following folder structure:
     v1.0-*	-	JSON tables that include all the meta data and annotations. Each split (trainval, test, mini) is provided in a separate folder.
 ```
 
-## 🚀 Usage
+## Usage
 Please follow these steps to make yourself familiar with the MAN TruckScenes dataset:
 - Read the [dataset description](https://www.man.eu/truckscenes/).
 - Explore the dataset [videos](https://cdn-assets-eu.frontify.com/s3/frontify-enterprise-files-eu/eyJwYXRoIjoibWFuXC9maWxlXC9lb2s3TGF5V1RXMXYxZU1TUk02US5tcDQifQ:man:MuLfMZFfol1xfBIL7rNw0W4SqczZqwTuzhvI-yxJmdY?width={width}&format=mp4).
@@ -57,7 +57,7 @@ Please follow these steps to make yourself familiar with the MAN TruckScenes dat
 - Run the [tutorial](./tutorials/truckscenes_tutorial.ipynb) to get started:
 - Read the [MAN TruckScenes paper](https://arxiv.org/abs/2407.07462) for a detailed analysis of the dataset.
 
-## 📄 Citation
+## Citation
 ```
 @inproceedings{truckscenes2024,
  title = {MAN TruckScenes: A multimodal dataset for autonomous trucking in diverse conditions},
