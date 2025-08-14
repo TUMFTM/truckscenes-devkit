@@ -50,7 +50,8 @@ class TruckScenes:
         self.verbose = verbose
         self.table_names = ['attribute', 'calibrated_sensor', 'category', 'ego_motion_cabin',
                             'ego_motion_chassis', 'ego_pose', 'instance', 'sample',
-                            'sample_annotation', 'sample_data', 'scene', 'sensor', 'visibility']
+                            'sample_annotation', 'sample_data', 'scene', 'sensor', 'visibility',
+                            'weather_annotation']
 
         assert osp.exists(self.table_root), \
             f'Database version not found: {self.table_root}'
@@ -73,6 +74,7 @@ class TruckScenes:
         self.scene = self.__load_table__('scene')
         self.sensor = self.__load_table__('sensor')
         self.visibility = self.__load_table__('visibility')
+        self.weather_annotation = self.__load_table__('weather_annotation')
 
         # Initialize the colormap which maps from class names to RGB values.
         self.colormap = colormap.get_colormap()
