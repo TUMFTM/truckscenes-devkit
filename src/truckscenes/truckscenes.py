@@ -500,6 +500,9 @@ class TruckScenes:
             return []
         return self.explorer.get_scenes_weather_annotations_filtered(conditions)
 
+    def get_scenes_description_filtered(self, conditions: List[Tuple[str, str]]) -> List[str]:
+        return self.explorer.get_scenes_description_filtered(conditions)
+
     def render_pointcloud_in_image(self, sample_token: str, dot_size: int = 5,
                                    pointsensor_channel: str = 'LIDAR_LEFT',
                                    camera_channel: str = 'CAMERA_LEFT_FRONT',

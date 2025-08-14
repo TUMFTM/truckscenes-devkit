@@ -197,6 +197,47 @@ class TruckScenesExplorer:
         
         return matching_scenes
 
+    def get_scenes_description_filtered(self, conditions: List[Tuple[str, str]]) -> List[str]:
+        """ 
+        Filters scenes based on description keywords and returns matching scene tokens.
+        
+        Arguments:
+            conditions: List of tuples (keyword, operator) where:
+                - keyword: String to search for in scene description
+                - operator: Comparison operator ('==' for contains, '!=' for not contains)
+                
+        Returns:
+            List of scene tokens that match all conditions.
+        """
+        valid_operators = {'==', '!='}
+        
+        # Validate all conditions
+        for keyword, operator in conditions:
+            assert isinstance(keyword, str), f"Keyword must be string, got {type(keyword)}"
+            assert operator in valid_operators, f"Invalid operator '{operator}'. Valid operators: {valid_operators}"
+        
+        matching_scenes = []
+        
+        for scene_record in self.trucksc.scene:
+            description = scene_record['description']
+            
+            # Check if scene matches all conditions
+            matches_all = True
+            for keyword, operator in conditions:
+                if operator == '==':
+                    if keyword not in description:
+                        matches_all = False
+                        break
+                elif operator == '!=':
+                    if keyword in description:
+                        matches_all = False
+                        break
+            
+            if matches_all:
+                matching_scenes.append(scene_record['token'])
+        
+        return matching_scenes
+
     def map_pointcloud_to_image(self,
                                 pointsensor_token: str,
                                 camera_token: str,
