@@ -126,6 +126,77 @@ class TruckScenesExplorer:
             print(f"sample_annotation_token: {ann_record['token']}"
                   f", category: {ann_record['category_name']}")
 
+    def get_scenes_weather_annotations_filtered(self, conditions: List[Tuple[str, str, float]]) -> List[str]:
+        """ 
+        Filters scenes based on annotated weather conditions and returns matching scene tokens.
+        
+        Arguments:
+            conditions: List of tuples (field, operator, value) where:
+                - field: Weather field name (any field from weather_annotation except 'token')
+                - operator: Comparison operator ('<', '>', '<=', '>=', '==', '!=')
+                - value: Numeric threshold value
+                
+        Returns:
+            List of scene tokens that match all conditions.
+            
+        Example:
+            # Find scenes with wind between 2 and 5, and rain > 1.0
+            conditions = [
+                ('wind', '>=', 2.0),
+                ('wind', '<=', 5.0),
+                ('rain', '>', 1.0)
+            ]
+            scene_tokens = ts.get_scenes_weather_annotations_filtered(conditions)
+        """
+        # Check if weather_annotation exists and has data
+        if not hasattr(self.trucksc, 'weather_annotation') or not self.trucksc.weather_annotation:
+            return []
+        
+        # Get valid fields from weather_annotation data (excluding 'token')
+        valid_fields = set(self.trucksc.weather_annotation[0].keys()) - {'token'}
+        valid_operators = {'<', '>', '<=', '>=', '==', '!='}
+        
+        # Validate all conditions
+        for field, operator, value in conditions:
+            assert field in valid_fields, f"Invalid field '{field}'. Valid fields: {valid_fields}"
+            assert operator in valid_operators, f"Invalid operator '{operator}'. Valid operators: {valid_operators}"
+            assert isinstance(value, (int, float)), f"Value must be numeric, got {type(value)}"
+        
+        def _evaluate_condition(field_value: float, operator: str, threshold: float) -> bool:
+            """Evaluate a single condition."""
+            if operator == '<':
+                return field_value < threshold
+            elif operator == '>':
+                return field_value > threshold
+            elif operator == '<=':
+                return field_value <= threshold
+            elif operator == '>=':
+                return field_value >= threshold
+            elif operator == '==':
+                return abs(field_value - threshold) < 1e-6  # Float equality with tolerance
+            elif operator == '!=':
+                return abs(field_value - threshold) >= 1e-6  # Float inequality with tolerance
+            return False
+        
+        matching_scenes = []
+        
+        for scene_record in self.trucksc.scene:
+            weather_token = scene_record['weather_annotation_token']
+            weather_record = self.trucksc.get('weather_annotation', weather_token)
+            
+            # Check if scene matches all conditions
+            matches_all = True
+            for field, operator, value in conditions:
+                field_value = weather_record[field]
+                if not _evaluate_condition(field_value, operator, value):
+                    matches_all = False
+                    break
+            
+            if matches_all:
+                matching_scenes.append(scene_record['token'])
+        
+        return matching_scenes
+
     def map_pointcloud_to_image(self,
                                 pointsensor_token: str,
                                 camera_token: str,

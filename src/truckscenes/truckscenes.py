@@ -495,6 +495,11 @@ class TruckScenes:
     def list_sample(self, sample_token: str) -> None:
         self.explorer.list_sample(sample_token)
 
+    def get_scenes_weather_annotations_filtered(self, conditions: List[Tuple[str, str, float]]) -> List[str]:
+        if 'weather_annotation' not in self.table_names:
+            return []
+        return self.explorer.get_scenes_weather_annotations_filtered(conditions)
+
     def render_pointcloud_in_image(self, sample_token: str, dot_size: int = 5,
                                    pointsensor_channel: str = 'LIDAR_LEFT',
                                    camera_channel: str = 'CAMERA_LEFT_FRONT',
