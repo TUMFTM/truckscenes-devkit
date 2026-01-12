@@ -104,7 +104,13 @@ class TruckScenes:
 
     def __load_table__(self, table_name) -> dict:
         """ Loads a table. """
-        with open(osp.join(self.table_root, '{}.json'.format(table_name))) as f:
+        table_path = osp.join(self.table_root, '{}.json'.format(table_name))
+        
+        if table_name == 'weather_annotation' and not osp.exists(table_path):
+            warnings.warn("weather_annotations.json was not found. It's available starting from v1.1")
+            return []
+        
+        with open(table_path) as f:
             table = json.load(f)
         return table
 
@@ -496,8 +502,6 @@ class TruckScenes:
         self.explorer.list_sample(sample_token)
 
     def get_scenes_weather_annotations_filtered(self, conditions: List[Tuple[str, str, float]]) -> List[str]:
-        if 'weather_annotation' not in self.table_names:
-            return []
         return self.explorer.get_scenes_weather_annotations_filtered(conditions)
 
     def get_scenes_description_filtered(self, conditions: List[Tuple[str, str]]) -> List[str]:

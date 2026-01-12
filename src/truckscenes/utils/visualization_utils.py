@@ -140,16 +140,16 @@ class TruckScenesExplorer:
             List of scene tokens that match all conditions.
             
         Example:
-            # Find scenes with wind between 2 and 5, and rain > 1.0
+            # Find scenes with wind between 2 and 5, and temperature > 1.0
             conditions = [
                 ('wind', '>=', 2.0),
                 ('wind', '<=', 5.0),
-                ('rain', '>', 1.0)
+                ('temperature', '>', 290.0)
             ]
             scene_tokens = ts.get_scenes_weather_annotations_filtered(conditions)
         """
-        # Check if weather_annotation exists and has data
-        if not hasattr(self.trucksc, 'weather_annotation') or not self.trucksc.weather_annotation:
+        # Check if weather_annotation has data, which it hasn't for versions <1.1
+        if not self.trucksc.weather_annotation:
             return []
         
         # Get valid fields from weather_annotation data (excluding 'token')
