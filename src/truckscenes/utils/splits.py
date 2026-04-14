@@ -613,6 +613,8 @@ val = [
     "scene-fdac5b1b465e4affaae74ac616150676-1"
 ]
 
+trainval = list(sorted(set(train + val)))
+
 test = [
     "scene-0c2e941c5ba2476b9e20b29ce4c678b9-11",
     "scene-0c2e941c5ba2476b9e20b29ce4c678b9-4",
@@ -780,6 +782,8 @@ mini_val = [
     'scene-13f4b71b1bd04a9e88747ad8f58a3f67-4',
     'scene-0044384af3d8494e913fb8b14915239e-3'
 ]
+
+mini = list(sorted(set(mini_train + mini_val)))
 
 
 def create_splits_logs(split: str, trucksc: TruckScenes) -> List[str]:
