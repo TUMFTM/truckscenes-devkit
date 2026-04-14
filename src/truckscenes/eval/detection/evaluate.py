@@ -370,7 +370,7 @@ if __name__ == "__main__":
                         help='Which dataset split to evaluate on, train, val or test.')
     parser.add_argument('--dataroot', type=str, default='/data/man-truckscenes',
                         help='Default TruckScenes data directory.')
-    parser.add_argument('--version', type=str, default='v1.0-trainval',
+    parser.add_argument('--version', type=str, default='v1.2-trainval',
                         help='Which version of the TruckScenes dataset to evaluate on')
     parser.add_argument('--config_path', type=str, default='',
                         help='Path to the configuration file.'

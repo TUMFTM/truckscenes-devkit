@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 import json
+import os
 import os.path as osp
+import re
 import sys
 import time
 import warnings
@@ -12,7 +14,7 @@ import warnings
 from bisect import bisect_left
 from collections import OrderedDict
 from importlib import import_module
-from typing import Dict, List, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 
@@ -33,56 +35,59 @@ class TruckScenes:
     Database class for truckscenes to help query and retrieve information from the database.
     """
 
+    attribute: List[Dict[str, Any]]
+    calibrated_sensor: List[Dict[str, Any]]
+    category: List[Dict[str, Any]]
+    ego_motion_cabin: List[Dict[str, Any]]
+    ego_motion_chassis: List[Dict[str, Any]]
+    ego_pose: List[Dict[str, Any]]
+    instance: List[Dict[str, Any]]
+    sample: List[Dict[str, Any]]
+    sample_annotation: List[Dict[str, Any]]
+    sample_data: List[Dict[str, Any]]
+    scene: List[Dict[str, Any]]
+    sensor: List[Dict[str, Any]]
+    visibility: List[Dict[str, Any]]
+    weather_annotation: List[Dict[str, Any]]
+
     def __init__(self,
-                 version: str = 'v1.0-mini',
+                 version: Optional[str] = None,
                  dataroot: str = '/data/man-truckscenes',
                  verbose: bool = True):
         """
         Loads database and creates reverse indexes and shortcuts.
 
         Arguments:
-            version: Version to load (e.g. "v1.0-mini", ...).
+            version: Version to load (e.g. "v1.2-mini", ...).
             dataroot: Path to the tables and data.
             verbose: Whether to print status messages during load.
         """
-        self.version = version
-        self.dataroot = dataroot
         self.verbose = verbose
+        self.dataroot = dataroot
+        self.version = version
         self.table_names = ['attribute', 'calibrated_sensor', 'category', 'ego_motion_cabin',
                             'ego_motion_chassis', 'ego_pose', 'instance', 'sample',
                             'sample_annotation', 'sample_data', 'scene', 'sensor', 'visibility',
                             'weather_annotation']
 
-        assert osp.exists(self.table_root), \
-            f'Database version not found: {self.table_root}'
+        if not osp.exists(self.table_root):
+            raise FileNotFoundError(f'Database version not found: {self.table_root}')
 
         start_time = time.time()
         if verbose:
             print(f"======\nLoading truckscenes tables for version {self.version}...")
 
-        # Explicitly assign tables to help the IDE determine valid class members.
-        self.attribute = self.__load_table__('attribute')
-        self.calibrated_sensor = self.__load_table__('calibrated_sensor')
-        self.category = self.__load_table__('category')
-        self.ego_motion_cabin = self.__load_table__('ego_motion_cabin')
-        self.ego_motion_chassis = self.__load_table__('ego_motion_chassis')
-        self.ego_pose = self.__load_table__('ego_pose')
-        self.instance = self.__load_table__('instance')
-        self.sample = self.__load_table__('sample')
-        self.sample_annotation = self.__load_table__('sample_annotation')
-        self.sample_data = self.__load_table__('sample_data')
-        self.scene = self.__load_table__('scene')
-        self.sensor = self.__load_table__('sensor')
-        self.visibility = self.__load_table__('visibility')
-        self.weather_annotation = self.__load_table__('weather_annotation')
+        # Load tables.
+        for table in self.table_names:
+            setattr(self, table, self.__load_table__(table))
 
         # Initialize the colormap which maps from class names to RGB values.
         self.colormap = colormap.get_colormap()
 
         if verbose:
             for table in self.table_names:
-                print("{} {},".format(len(getattr(self, table)), table))
-            print("Done loading in {:.3f} seconds.\n======".format(time.time() - start_time))
+                print(f"{len(getattr(self, table))} {table},")
+            print(f"Done loading in {time.time() - start_time:.3f} seconds.\n======")
 
         # Make reverse indexes for common lookups.
         self.__make_reverse_index__(verbose)
@@ -102,7 +107,48 @@ class TruckScenes:
         """ Returns the folder where the tables are stored for the relevant version. """
         return osp.join(self.dataroot, self.version)
 
-    def __load_table__(self, table_name) -> dict:
+    @property
+    def version(self) -> str:
+        """Returns the currently loaded dataset version."""
+        return self._version
+
+    @version.setter
+    def version(self, value: Optional[str]):
+        """Sets the version, automatically detecting the latest if None is provided."""
+        if value is not None:
+            self._version = value
+        else:
+            if not osp.exists(self.dataroot):
+                raise FileNotFoundError(f"Dataroot does not exist: {self.dataroot}")
+
+            # Define regex to match the version naming convention: vX.Y-split
+            pattern = re.compile(r'^v(\d+)\.(\d+)-(mini|test|trainval)$')
+
+            # Define auto discovery split priority
+            split_priority = {'mini': 3, 'trainval': 2, 'test': 1}
+
+            # Find all available dataset versions in dataroot
+            available_versions = []
+            for dirname in os.listdir(self.dataroot):
+                if not osp.isdir(osp.join(self.dataroot, dirname)):
+                    continue
+                match = pattern.match(dirname)
+                if match:
+                    major, minor, split = match.groups()
+                    available_versions.append(
+                        (int(major), int(minor), split_priority[split], dirname)
+                    )
+
+            if not available_versions:
+                raise ValueError(f"No valid dataset versions found in dataroot: {self.dataroot}")
+
+            # Select latest version by major, minor, and split priority
+            self._version = max(available_versions)[3]
+
+            if self.verbose:
+                print(f"======\nAuto-detected latest version: {self._version}")
+
+    def __load_table__(self, table_name) -> List[Dict[str, Any]]:
         """ Loads a table. """
         table_path = osp.join(self.table_root, '{}.json'.format(table_name))
 
