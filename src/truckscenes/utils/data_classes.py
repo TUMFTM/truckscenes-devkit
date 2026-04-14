@@ -379,7 +379,7 @@ class Box:
         assert not np.any(np.isnan(size))
         assert len(center) == 3
         assert len(size) == 3
-        assert type(orientation) == Quaternion
+        assert isinstance(orientation, Quaternion)
 
         self.center = np.array(center)
         self.wlh = np.array(size)

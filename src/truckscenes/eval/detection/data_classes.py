@@ -367,7 +367,7 @@ class DetectionBox(EvalBox):
         assert attribute_name in ATTRIBUTE_NAMES or attribute_name == '', \
             'Error: Unknown attribute_name %s' % attribute_name
 
-        assert type(detection_score) == float, 'Error: detection_score must be a float!'
+        assert isinstance(detection_score, float), 'Error: detection_score must be a float!'
         assert not np.any(np.isnan(detection_score)), 'Error: detection_score may not be NaN!'
 
         # Assign.

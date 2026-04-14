@@ -33,7 +33,7 @@ class EvalBox(abc.ABC):
                  num_pts: int = -1):
 
         # Assert data for shape and NaNs.
-        assert type(sample_token) == str, 'Error: sample_token must be a string!'
+        assert isinstance(sample_token, str), 'Error: sample_token must be a string!'
 
         assert len(translation) == 3, 'Error: Translation must have 3 elements!'
         assert not np.any(np.isnan(translation)), 'Error: Translation may not be NaN!'
@@ -50,7 +50,7 @@ class EvalBox(abc.ABC):
         assert len(ego_translation) == 3, 'Error: Translation must have 3 elements!'
         assert not np.any(np.isnan(ego_translation)), 'Error: Translation may not be NaN!'
 
-        assert type(num_pts) == int, 'Error: num_pts must be int!'
+        assert isinstance(num_pts, int), 'Error: num_pts must be int!'
         assert not np.any(np.isnan(num_pts)), 'Error: num_pts may not be NaN!'
 
         # Assign.
