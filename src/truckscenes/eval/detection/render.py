@@ -8,6 +8,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 from truckscenes import TruckScenes
+from truckscenes.utils.geometry_utils import box_in_image
 from truckscenes.eval.common.data_classes import EvalBoxes
 from truckscenes.eval.common.render import setup_axis
 from truckscenes.eval.common.utils import boxes_to_sensor
@@ -19,21 +20,115 @@ from truckscenes.eval.detection.data_classes import DetectionMetrics, DetectionM
 Axis = Any
 
 
-def visualize_sample(trucksc: TruckScenes,
-                     sample_token: str,
-                     gt_boxes: EvalBoxes,
-                     pred_boxes: EvalBoxes,
-                     nsweeps: int = 1,
-                     conf_th: float = 0.15,
-                     eval_range: float = 50,
-                     verbose: bool = True,
-                     savepath: str = None) -> None:
+def _visualize_camera_sample(trucksc: TruckScenes,
+                             sample_token: str,
+                             gt_boxes: EvalBoxes,
+                             pred_boxes: EvalBoxes,
+                             conf_th: float = 0.15,
+                             verbose: bool = True,
+                             savepath: str = None) -> None:
     """
     Visualizes a sample from BEV with annotations and detection results.
     :param trucksc: TruckScenes object.
     :param sample_token: The TruckScenes sample token.
     :param gt_boxes: Ground truth boxes grouped by sample.
     :param pred_boxes: Prediction grouped by sample.
+    :param conf_th: The confidence threshold used to filter negatives.
+    :param eval_range: Range in meters beyond which boxes are ignored.
+    :param verbose: Whether to print to stdout.
+    :param savepath: If given, saves the the rendering here instead of displaying.
+    """
+    # Retrieve sensor & pose records.
+    sample_rec = trucksc.get('sample', sample_token)
+    sd_record = trucksc.get('sample_data', sample_rec['data']['CAMERA_LEFT_FRONT'])
+    cs_record = trucksc.get('calibrated_sensor', sd_record['calibrated_sensor_token'])
+
+    if 'ego_pose_token' in sample_rec:
+        pose_record = trucksc.get('ego_pose', sample_rec['ego_pose_token'])
+    else:
+        pose_record = trucksc.getclosest('ego_pose', sample_rec['timestamp'])
+
+    # Get camera intrinsics
+    camera_intrinsic = np.array(cs_record['camera_intrinsic'])
+    imsize = (sd_record['width'], sd_record['height'])
+
+    # Get boxes.
+    boxes_gt_global = gt_boxes[sample_token]
+    boxes_est_global = pred_boxes[sample_token]
+
+    # Camera
+    sample_data_token = sample_rec['data']['CAMERA_LEFT_FRONT']
+
+    # Init axes (w, h) / dpi / 3
+    fig = plt.figure(figsize=(imsize[0] / 200, imsize[1] / 200))
+    ax = fig.add_axes([0, 0, 1, 1])
+
+    # Render camera image
+    trucksc.render_sample_data(sample_data_token=sample_data_token, with_anns=False, ax=ax)
+
+    # Map GT boxes to lidar.
+    boxes_gt = boxes_to_sensor(boxes_gt_global, pose_record, cs_record)
+
+    # Map EST boxes to lidar.
+    boxes_est = boxes_to_sensor(boxes_est_global, pose_record, cs_record)
+
+    # Add scores to EST boxes.
+    for box_est, box_est_global in zip(boxes_est, boxes_est_global):
+        box_est.score = box_est_global.detection_score
+
+    # Filter GT boxes
+    boxes_gt = [
+        box for box in boxes_gt
+        if box_in_image(box, camera_intrinsic, imsize)
+    ]
+
+    # Filter EST boxes
+    boxes_est = [
+        box for box in boxes_est
+        if box_in_image(box, camera_intrinsic, imsize)
+    ]
+
+    # Show GT boxes.
+    for box in boxes_gt:
+        box.render(ax, view=camera_intrinsic, normalize=True,
+                   colors=('g', 'g', 'g'), linewidth=2)
+
+    # Show EST boxes.
+    for box in boxes_est:
+        # Show only predictions with a high score.
+        assert not np.isnan(box.score), 'Error: Box score cannot be NaN!'
+        if box.score >= conf_th:
+            box.render(ax, view=camera_intrinsic, normalize=True,
+                       colors=('b', 'b', 'b'), linewidth=1)
+
+    # Format plot
+    ax.axis('off')
+
+    # Show / save plot.
+    if savepath is not None:
+        plt.savefig(f"{savepath}_camera.jpg", bbox_inches=None, pad_inches=0, dpi=300)
+        plt.close()
+    else:
+        plt.show()
+
+
+def _visualize_pc_sample(trucksc: TruckScenes,
+                         sample_token: str,
+                         gt_boxes: EvalBoxes,
+                         pred_boxes: EvalBoxes,
+                         modality: str = 'lidar',
+                         nsweeps: int = 1,
+                         conf_th: float = 0.15,
+                         eval_range: float = 50,
+                         verbose: bool = True,
+                         savepath: str = None) -> None:
+    """
+    Visualizes a sample from BEV with annotations and detection results.
+    :param trucksc: TruckScenes object.
+    :param sample_token: The TruckScenes sample token.
+    :param gt_boxes: Ground truth boxes grouped by sample.
+    :param pred_boxes: Prediction grouped by sample.
+    :param modality: Point cloud sensor modality (lidar or radar).
     :param nsweeps: Number of sweeps used for lidar visualization.
     :param conf_th: The confidence threshold used to filter negatives.
     :param eval_range: Range in meters beyond which boxes are ignored.
@@ -44,14 +139,20 @@ def visualize_sample(trucksc: TruckScenes,
     sample_rec = trucksc.get('sample', sample_token)
     sd_record = trucksc.get('sample_data', sample_rec['data']['LIDAR_LEFT'])
     cs_record = trucksc.get('calibrated_sensor', sd_record['calibrated_sensor_token'])
-    pose_record = trucksc.get('ego_pose', sd_record['ego_pose_token'])
-    sample_data_token = [
-        sample_rec['data'][sensor] for sensor in sample_rec['data'] if 'lidar' in sensor.lower()
-    ]
+
+    if 'ego_pose_token' in sample_rec:
+        pose_record = trucksc.get('ego_pose', sample_rec['ego_pose_token'])
+    else:
+        pose_record = trucksc.getclosest('ego_pose', sample_rec['timestamp'])
 
     # Get boxes.
     boxes_gt_global = gt_boxes[sample_token]
     boxes_est_global = pred_boxes[sample_token]
+
+    # Git lidar sample data token
+    sample_data_token = [
+        sample_rec['data'][sensor] for sensor in sample_rec['data'] if modality in sensor.lower()
+    ]
 
     # Map GT boxes to lidar.
     boxes_gt = boxes_to_sensor(boxes_gt_global, pose_record, cs_record,
@@ -89,15 +190,80 @@ def visualize_sample(trucksc: TruckScenes,
     ax.set_xlim(-axes_limit, axes_limit)
     ax.set_ylim(-axes_limit, axes_limit)
 
+    # Format plot
+    plt.tight_layout()
+
     # Show / save plot.
-    if verbose:
-        print('Rendering sample token %s' % sample_token)
-    plt.title(sample_token)
     if savepath is not None:
-        plt.savefig(savepath)
+        plt.savefig(f"{savepath}_{modality}.png", bbox_inches='tight',
+                    pad_inches=0, transparent=False, dpi=300)
         plt.close()
     else:
         plt.show()
+
+
+def visualize_sample(trucksc: TruckScenes,
+                     sample_token: str,
+                     gt_boxes: EvalBoxes,
+                     pred_boxes: EvalBoxes,
+                     nsweeps: int = 1,
+                     conf_th: float = 0.15,
+                     eval_range: float = 50,
+                     verbose: bool = True,
+                     savepath: str = None) -> None:
+    """
+    Visualizes a sample from BEV with annotations and detection results.
+    :param trucksc: TruckScenes object.
+    :param sample_token: The TruckScenes sample token.
+    :param gt_boxes: Ground truth boxes grouped by sample.
+    :param pred_boxes: Prediction grouped by sample.
+    :param nsweeps: Number of sweeps used for lidar visualization.
+    :param conf_th: The confidence threshold used to filter negatives.
+    :param eval_range: Range in meters beyond which boxes are ignored.
+    :param verbose: Whether to print to stdout.
+    :param savepath: If given, saves the the rendering here instead of displaying.
+    """
+    # Render camera data
+    _visualize_camera_sample(
+        trucksc=trucksc,
+        sample_token=sample_token,
+        gt_boxes=gt_boxes,
+        pred_boxes=pred_boxes,
+        conf_th=conf_th,
+        verbose=verbose,
+        savepath=savepath
+    )
+
+    # Render lidar data
+    _visualize_pc_sample(
+        trucksc=trucksc,
+        sample_token=sample_token,
+        gt_boxes=gt_boxes,
+        pred_boxes=pred_boxes,
+        modality='lidar',
+        nsweeps=nsweeps,
+        conf_th=conf_th,
+        eval_range=eval_range,
+        verbose=verbose,
+        savepath=savepath
+    )
+
+    # Render radar data
+    _visualize_pc_sample(
+        trucksc=trucksc,
+        sample_token=sample_token,
+        gt_boxes=gt_boxes,
+        pred_boxes=pred_boxes,
+        modality='radar',
+        nsweeps=nsweeps,
+        conf_th=conf_th,
+        eval_range=eval_range,
+        verbose=verbose,
+        savepath=savepath
+    )
+
+    if verbose:
+        print('Rendering sample token %s' % sample_token)
 
 
 def class_pr_curve(md_list: DetectionMetricDataList,

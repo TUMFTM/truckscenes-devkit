@@ -262,7 +262,7 @@ class DetectionEval:
                                  # Don't render test GT.
                                  self.pred_boxes,
                                  eval_range=max(self.cfg.class_range.values()),
-                                 savepath=os.path.join(example_dir, '{}.png'.format(sample_token)))
+                                 savepath=os.path.join(example_dir, sample_token))
 
     def main(self,
              plot_examples: int = 0,

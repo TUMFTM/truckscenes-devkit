@@ -739,7 +739,6 @@ class TruckScenesExplorer:
             raise ValueError("Error: Unknown sensor modality!")
 
         ax.axis('off')
-        ax.set_title('{} {labels_type}'.format(sensor_modality.upper(), labels_type=''))
         ax.set_aspect('equal')
 
         if out_path is not None:
